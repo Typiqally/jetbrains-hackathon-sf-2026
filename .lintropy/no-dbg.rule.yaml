@@ -1,0 +1,7 @@
+severity: error
+message: "stray dbg! — remove before merging"
+language: rust
+query: |
+  (macro_invocation
+    macro: (identifier) @n
+    (#eq? @n "dbg")) @match
