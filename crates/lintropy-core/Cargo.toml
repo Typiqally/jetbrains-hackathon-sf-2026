@@ -9,7 +9,15 @@ authors.workspace = true
 description = "Shared types, errors, and traits for lintropy."
 
 [dependencies]
+globset = "0.4"
+lintropy-langs = { path = "../lintropy-langs" }
+rayon = "1"
+regex = "1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 schemars = { workspace = true }
 thiserror = { workspace = true }
+tree-sitter = { workspace = true }
+
+[dev-dependencies]
+insta = { version = "1", features = ["json"] }
