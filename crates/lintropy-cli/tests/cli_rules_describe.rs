@@ -48,3 +48,40 @@ fn rules_text_hides_description_when_absent() {
         "no-dbg block should have no description, got:\n{block}"
     );
 }
+
+fn json_output(fx: &DescribeFixture, args: &[&str]) -> serde_json::Value {
+    let mut cmd = Command::cargo_bin("lintropy").unwrap();
+    cmd.current_dir(fx.path()).arg("rules");
+    for a in args {
+        cmd.arg(a);
+    }
+    let out = cmd.assert().code(0).get_output().stdout.clone();
+    serde_json::from_slice(&out).expect("valid JSON")
+}
+
+#[test]
+fn rules_json_description_null_when_absent() {
+    let fx = DescribeFixture::new();
+    let arr = json_output(&fx, &["--format", "json"]);
+    let arr = arr.as_array().unwrap();
+    let dbg_rule = arr
+        .iter()
+        .find(|o| o["id"] == "no-dbg")
+        .expect("no-dbg entry");
+    assert_eq!(dbg_rule["description"], serde_json::Value::Null);
+}
+
+#[test]
+fn rules_json_description_string_when_present() {
+    let fx = DescribeFixture::new();
+    let arr = json_output(&fx, &["--format", "json"]);
+    let arr = arr.as_array().unwrap();
+    let unwrap_rule = arr
+        .iter()
+        .find(|o| o["id"] == "no-unwrap")
+        .expect("no-unwrap entry");
+    assert_eq!(
+        unwrap_rule["description"],
+        "Flags `.unwrap()` on Result/Option."
+    );
+}
