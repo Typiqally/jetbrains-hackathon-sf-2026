@@ -221,7 +221,7 @@ mod tests {
         let foo_end = foo_start + "foo".len();
         let bar_start = "α=foo;β=".len();
         let bar_end = bar_start + "bar".len();
-        let diags = vec![
+        let diags = [
             diag_with_fix("x.rs", foo_start, foo_end, "FOO"),
             diag_with_fix("x.rs", bar_start, bar_end, "BAR"),
         ];
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn overlapping_hunks_dropped() {
-        let diags = vec![
+        let diags = [
             diag_with_fix("x.rs", 0, 10, "first"),
             diag_with_fix("x.rs", 5, 15, "second"),
         ];
