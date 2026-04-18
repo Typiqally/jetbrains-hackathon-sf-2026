@@ -85,3 +85,34 @@ fn rules_json_description_string_when_present() {
         "Flags `.unwrap()` on Result/Option."
     );
 }
+
+#[test]
+fn rules_text_group_by_language_produces_rust_group() {
+    let fx = DescribeFixture::new();
+    let out = run_rules(&fx, &["--group-by", "language"])
+        .code(0)
+        .get_output()
+        .stdout
+        .clone();
+    let text = String::from_utf8(out).unwrap();
+
+    // There is exactly one language group: rust.
+    let rust_header = text
+        .find("rust\n----")
+        .expect("expected `rust` group header with underline");
+
+    // The `(any)` bucket should not appear — every fixture rule has a language.
+    assert!(
+        !text.contains("(any)"),
+        "unexpected (any) bucket in language-grouped output:\n{text}"
+    );
+
+    // Every rule id appears after the header.
+    for id in ["bare", "no-dbg", "no-print", "no-unwrap"] {
+        let pos = text.find(id).unwrap_or_else(|| panic!("{id} missing"));
+        assert!(
+            pos > rust_header,
+            "{id} should appear after the rust group header"
+        );
+    }
+}
