@@ -21,9 +21,7 @@ pub fn run(args: RulesArgs) -> Result<u8, CliError> {
         }
         OutputFormat::Json => {
             if !matches!(args.group_by, GroupBy::None) {
-                return Err(CliError::user(
-                    "--group-by only applies to text format",
-                ));
+                return Err(CliError::user("--group-by only applies to text format"));
             }
             print_json(&config)?;
             Ok(EXIT_OK)

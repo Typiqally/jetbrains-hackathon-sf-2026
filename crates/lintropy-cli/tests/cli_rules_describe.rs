@@ -127,9 +127,7 @@ fn rules_text_group_by_tag_first_tag_wins_untagged_last() {
         .clone();
     let text = String::from_utf8(out).unwrap();
 
-    let noise_idx = text
-        .find("noise\n-----")
-        .expect("noise group header");
+    let noise_idx = text.find("noise\n-----").expect("noise group header");
     let reliability_idx = text
         .find("reliability\n-----------")
         .expect("reliability group header");
