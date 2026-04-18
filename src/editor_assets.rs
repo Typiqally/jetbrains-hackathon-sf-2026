@@ -15,3 +15,7 @@ pub const VSIX_FILE_NAME: &str = "lintropy-query-syntax.vsix";
 pub static TMBUNDLE_DIR: Dir<'_> =
     include_dir!("$CARGO_MANIFEST_DIR/editors/textmate/Lintropy Query.tmbundle");
 pub const TMBUNDLE_DIR_NAME: &str = "Lintropy Query.tmbundle";
+
+pub static LSP4IJ_TEMPLATE_DIR: Dir<'_> =
+    include_dir!("$CARGO_MANIFEST_DIR/editors/jetbrains/lsp4ij-template");
+pub const LSP4IJ_TEMPLATE_DIR_NAME: &str = "lsp4ij-template";
