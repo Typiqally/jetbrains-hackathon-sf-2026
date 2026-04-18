@@ -30,7 +30,7 @@ pub enum Command {
     /// Scaffold lintropy.yaml and .lintropy/ in the current directory.
     Init(InitArgs),
     /// Emit the config JSON schema (for LLM grounding and editor plugins).
-    Schema,
+    Schema(SchemaArgs),
     /// Load and validate config without running the engine.
     #[command(subcommand)]
     Config(ConfigCommand),
@@ -91,6 +91,17 @@ impl From<HookSeverity> for Severity {
             HookSeverity::Error => Severity::Error,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum SchemaKind {
+    /// The repo-root `lintropy.yaml` schema.
+    #[default]
+    Root,
+    /// A single `.lintropy/*.rule.yaml` schema.
+    Rule,
+    /// A grouped `.lintropy/*.rules.yaml` schema.
+    Rules,
 }
 
 #[derive(Debug, Default, Args)]
@@ -184,6 +195,17 @@ pub struct InitArgs {
     /// Override skill directory target.
     #[arg(long = "skill-dir", value_name = "PATH")]
     pub skill_dir: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Args)]
+pub struct SchemaArgs {
+    /// Schema shape to emit.
+    #[arg(long, value_enum, default_value_t = SchemaKind::Root)]
+    pub kind: SchemaKind,
+
+    /// Write the schema to PATH instead of stdout.
+    #[arg(long, short = 'o', value_name = "PATH")]
+    pub output: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
