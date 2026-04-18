@@ -1,0 +1,19 @@
+[package]
+name = "lintropy-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "lintropy CLI binary."
+
+[[bin]]
+name = "lintropy"
+path = "src/main.rs"
+
+[dependencies]
+lintropy-core = { path = "../lintropy-core" }
+lintropy-langs = { path = "../lintropy-langs" }
+lintropy-output = { path = "../lintropy-output" }
+lintropy-rules = { path = "../lintropy-rules" }

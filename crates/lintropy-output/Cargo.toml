@@ -1,0 +1,12 @@
+[package]
+name = "lintropy-output"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Reporter trait and (eventually) text + JSON reporters."
+
+[dependencies]
+lintropy-core = { path = "../lintropy-core" }
