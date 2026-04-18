@@ -1,0 +1,5 @@
+version: 1
+
+settings:
+  fail_on: error
+  default_severity: warning

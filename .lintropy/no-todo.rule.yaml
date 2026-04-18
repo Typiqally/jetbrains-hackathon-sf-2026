@@ -1,0 +1,7 @@
+severity: info
+message: "TODO comment — track in issue tracker before merging"
+language: rust
+query: |
+  (line_comment) @c
+  (#match? @c "TODO")
+  @match
