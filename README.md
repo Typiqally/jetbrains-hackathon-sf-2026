@@ -146,6 +146,57 @@ write and respect the repo’s guardrails.
 - rule-source-aware reporting
 - agent-oriented hooks and schema output
 
+## Install
+
+### Homebrew (macOS and Linux)
+
+```console
+brew tap Typiqally/lintropy
+brew install lintropy
+```
+
+### From source
+
+Stable Rust 1.95 or newer is required.
+
+```console
+# From crates.io (once published)
+cargo install lintropy-cli
+
+# Or from a local checkout
+cargo install --path crates/lintropy-cli
+```
+
+## Five-minute quickstart
+
+The `examples/rust-demo/` crate doubles as the reference fixture. Clone
+this repo and run:
+
+```console
+cd examples/rust-demo
+lintropy check .
+```
+
+You should see four warnings (`no-unwrap`, `no-println`, `user-use-builder`,
+`no-todo`) across three files, plus a hint that one autofix is available:
+
+```console
+lintropy check . --fix          # apply the no-unwrap autofix in place
+lintropy check . --fix-dry-run  # print the unified diff instead
+```
+
+To scaffold lintropy inside your own repo:
+
+```console
+lintropy init                   # writes lintropy.yaml + .lintropy/no-unwrap.rule.yaml
+lintropy init --with-skill      # also installs SKILL.md + wires the Claude Code hook
+```
+
+See [`specs/merged/2026-04-18-lintropy-merged.md`](specs/merged/2026-04-18-lintropy-merged.md)
+for the full spec. The canonical `SKILL.md` at
+[`crates/lintropy-cli/skill/SKILL.md`](crates/lintropy-cli/skill/SKILL.md)
+is what `init --with-skill` installs into agent skill directories.
+
 ## Editor Support
 
 This repo now checks in JSON Schemas for all lintropy YAML surfaces:

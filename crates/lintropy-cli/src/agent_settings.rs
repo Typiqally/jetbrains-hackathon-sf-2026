@@ -11,7 +11,9 @@ const MATCHER: &str = "Write|Edit|NotebookEdit";
 const COMMAND: &str = "lintropy hook --agent claude-code";
 
 pub fn merge_claude_settings(repo_root: &Path) -> Result<(), CliError> {
-    let settings_path = repo_root.join(CLAUDE_SETTINGS_DIR).join(CLAUDE_SETTINGS_FILE);
+    let settings_path = repo_root
+        .join(CLAUDE_SETTINGS_DIR)
+        .join(CLAUDE_SETTINGS_FILE);
     let mut root = read_settings(&settings_path)?;
     merge_lintropy_hook(&mut root)?;
     write_settings_atomic(&settings_path, &root)?;

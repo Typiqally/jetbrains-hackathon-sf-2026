@@ -449,6 +449,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "lintropy-e2e-tests"
+version = "0.1.0"
+dependencies = [
+ "assert_cmd",
+ "predicates",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
 name = "lintropy-langs"
 version = "0.1.0"
 dependencies = [

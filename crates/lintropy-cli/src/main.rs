@@ -1,6 +1,6 @@
 //! lintropy CLI entry point.
 //!
-//! Dispatches every §9 subcommand except `hook` (WP7). Exit codes follow
+//! Dispatches every §9 subcommand. Exit codes follow
 //! §7.6 of the merged spec:
 //!
 //! * `0` — no diagnostics at or above `settings.fail_on`
@@ -12,10 +12,11 @@ use std::process::ExitCode;
 
 use clap::Parser;
 
+mod agent_settings;
 mod cli;
 mod commands;
 mod exit;
-mod agent_settings;
+mod skill;
 mod walk;
 
 use crate::cli::{Cli, Command};

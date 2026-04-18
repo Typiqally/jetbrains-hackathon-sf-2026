@@ -6,10 +6,13 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Reporter trait and (eventually) text + JSON reporters."
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Reporter trait and text + JSON reporters for lintropy."
 
 [dependencies]
-lintropy-core = { path = "../lintropy-core" }
+lintropy-core = { path = "../lintropy-core", version = "0.1.0" }
 owo-colors = { version = "4", features = ["supports-colors"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

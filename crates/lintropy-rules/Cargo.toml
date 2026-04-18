@@ -6,7 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Rule DSL (placeholder — implemented by WP1)."
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Rule DSL crate for lintropy. Currently re-exports lintropy-core types."
 
 [dependencies]
-lintropy-core = { path = "../lintropy-core" }
+lintropy-core = { path = "../lintropy-core", version = "0.1.0" }

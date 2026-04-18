@@ -26,7 +26,10 @@ pub fn run(args: HookArgs) -> Result<u8, crate::exit::CliError> {
     let payload: Value = match serde_json::from_str(&stdin) {
         Ok(payload) => payload,
         Err(err) => {
-            warn(&args, &format!("failed to parse hook payload as JSON: {err}"));
+            warn(
+                &args,
+                &format!("failed to parse hook payload as JSON: {err}"),
+            );
             return Ok(EXIT_OK);
         }
     };
