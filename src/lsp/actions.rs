@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use tower_lsp::lsp_types::{
-    CodeAction, CodeActionKind, Diagnostic as LspDiagnostic, Range, TextEdit, Url, WorkspaceEdit,
+    CodeAction, CodeActionKind, Range, TextEdit, Url, WorkspaceEdit,
 };
 
 use crate::core::Diagnostic;
