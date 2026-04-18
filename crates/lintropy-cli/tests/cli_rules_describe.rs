@@ -158,3 +158,17 @@ fn rules_text_group_by_tag_first_tag_wins_untagged_last() {
         "no rust group header should exist"
     );
 }
+
+#[test]
+fn rules_rejects_group_by_with_json_format() {
+    let fx = DescribeFixture::new();
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .current_dir(fx.path())
+        .args(["rules", "--format", "json", "--group-by", "language"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "--group-by only applies to text format",
+        ));
+}
