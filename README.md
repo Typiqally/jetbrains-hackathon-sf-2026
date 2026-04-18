@@ -2,7 +2,7 @@
 
 # 🌿 Lintropy
 
-**The linter for rules your repo actually cares about.**
+**Repo-native linting for architecture, boundaries, and team-specific rules.**
 
 [![ci](https://github.com/Typiqally/lintropy/actions/workflows/ci.yaml/badge.svg)](https://github.com/Typiqally/lintropy/actions/workflows/ci.yaml)
 [![release](https://img.shields.io/github/v/release/Typiqally/lintropy?include_prereleases&sort=semver)](https://github.com/Typiqally/lintropy/releases)
@@ -15,6 +15,16 @@
 </div>
 
 ---
+
+Lintropy is a linter for rules your repo actually cares about. It started at
+[The IDE Reimagined: JetBrains Codex Hackathon](https://cerebralvalley.ai/e/jetbrains-x-openai-hack),
+a two-day San Francisco event focused on building AI-powered developer tools
+alongside JetBrains and OpenAI engineers.
+
+> [!WARNING]
+> This project began as hackathon code and is not actively maintained right
+> now. Expect rough edges, incomplete features, and bugs before using it in
+> production workflows.
 
 Most linters ship a fixed catalog. Lintropy does the opposite: rules live in
 your repo, one YAML file at a time, describing **your** conventions:
