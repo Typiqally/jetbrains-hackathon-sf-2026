@@ -56,6 +56,7 @@ pub struct RuleConfig {
     pub kind: RuleKind,
     pub fix: Option<String>,
     pub source_path: PathBuf,
+    pub description: Option<String>,
 }
 
 #[derive(Debug)]
@@ -153,6 +154,8 @@ struct RawRule {
     multiline: Option<bool>,
     #[serde(default)]
     fix: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -285,6 +288,7 @@ fn build_rule(
 ) -> Result<RuleConfig> {
     let id = resolve_id(&raw, &source_path, stem_default)?;
     let rule_id = RuleId::new(id.clone());
+    let description = raw.description.clone().filter(|s| !s.is_empty());
 
     let has_query = raw.query.is_some();
     let has_forbid = raw.forbid.is_some();
@@ -342,6 +346,7 @@ fn build_rule(
         kind,
         fix: raw.fix,
         source_path,
+        description,
     })
 }
 
@@ -526,5 +531,109 @@ mod tests {
         let object = schema.as_object().expect("schema is an object");
         assert!(object.contains_key("$schema"));
         assert!(object.contains_key("properties"));
+    }
+
+    fn write_fixture(dir: &std::path::Path, root: &str, rule: Option<(&str, &str)>) {
+        std::fs::write(dir.join("lintropy.yaml"), root).unwrap();
+        if let Some((filename, content)) = rule {
+            let lintropy_dir = dir.join(".lintropy");
+            std::fs::create_dir_all(&lintropy_dir).unwrap();
+            std::fs::write(lintropy_dir.join(filename), content).unwrap();
+        }
+    }
+
+    #[test]
+    fn description_roundtrips_from_single_rule_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"language: rust
+severity: warning
+description: "Flags bare .unwrap() calls."
+message: "no unwrap"
+query: |
+  ((identifier) @match (#eq? @match "foo"))
+"#;
+        write_fixture(
+            tmp.path(),
+            "version: 1\n",
+            Some(("no-unwrap.rule.yaml", rule)),
+        );
+        let config = Config::load_from_root(tmp.path()).unwrap();
+        assert_eq!(config.rules.len(), 1);
+        assert_eq!(
+            config.rules[0].description.as_deref(),
+            Some("Flags bare .unwrap() calls.")
+        );
+    }
+
+    #[test]
+    fn description_absent_resolves_to_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"language: rust
+severity: warning
+message: "no unwrap"
+query: |
+  ((identifier) @match (#eq? @match "foo"))
+"#;
+        write_fixture(
+            tmp.path(),
+            "version: 1\n",
+            Some(("no-unwrap.rule.yaml", rule)),
+        );
+        let config = Config::load_from_root(tmp.path()).unwrap();
+        assert_eq!(config.rules.len(), 1);
+        assert!(config.rules[0].description.is_none());
+    }
+
+    #[test]
+    fn description_empty_string_normalises_to_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"language: rust
+severity: warning
+description: ""
+message: "no unwrap"
+query: |
+  ((identifier) @match (#eq? @match "foo"))
+"#;
+        write_fixture(
+            tmp.path(),
+            "version: 1\n",
+            Some(("no-unwrap.rule.yaml", rule)),
+        );
+        let config = Config::load_from_root(tmp.path()).unwrap();
+        assert!(config.rules[0].description.is_none());
+    }
+
+    #[test]
+    fn description_multiline_preserves_newlines() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"language: rust
+severity: warning
+description: |
+  line one
+  line two
+message: "no unwrap"
+query: |
+  ((identifier) @match (#eq? @match "foo"))
+"#;
+        write_fixture(
+            tmp.path(),
+            "version: 1\n",
+            Some(("no-unwrap.rule.yaml", rule)),
+        );
+        let config = Config::load_from_root(tmp.path()).unwrap();
+        assert_eq!(
+            config.rules[0].description.as_deref(),
+            Some("line one\nline two\n")
+        );
+    }
+
+    #[test]
+    fn json_schema_exposes_description_property() {
+        let schema = Config::json_schema();
+        let schema_str = serde_json::to_string(&schema).unwrap();
+        assert!(
+            schema_str.contains("\"description\""),
+            "expected `description` property in JSON schema, got: {schema_str}"
+        );
     }
 }

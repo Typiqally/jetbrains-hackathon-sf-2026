@@ -40,6 +40,7 @@ fn rule(
         kind: RuleKind::Query(query_rule(Language::Rust, query_src)),
         fix: fix.map(str::to_string),
         source_path: PathBuf::from(format!(".lintropy/{id}.rule.yaml")),
+        description: None,
     }
 }
 
