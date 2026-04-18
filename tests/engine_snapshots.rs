@@ -108,15 +108,15 @@ fn respects_include_and_exclude_globs() {
           (#eq? @name "println")) @match
         "#,
     );
-    only_src.include = vec!["**/fixtures/engine/*.rs".into()];
-    only_src.exclude = vec!["**/skip.rs".into()];
+    only_src.include = vec!["engine/*.rs".into()];
+    only_src.exclude = vec!["engine/skip.rs".into()];
 
     let config = Config {
         version: 1,
         settings: Settings::default(),
         rules: vec![only_src],
         warnings: Vec::new(),
-        root_dir: PathBuf::new(),
+        root_dir: fixture_path("").parent().unwrap().to_path_buf(),
         root_config: PathBuf::from("lintropy.yaml"),
     };
 
@@ -124,6 +124,35 @@ fn respects_include_and_exclude_globs() {
     let diagnostics = engine::run(&config, &files).unwrap();
     assert_eq!(diagnostics.len(), 1);
     assert!(diagnostics[0].file.ends_with("sample.rs"));
+}
+
+#[test]
+fn include_globs_are_matched_relative_to_root_dir() {
+    let mut scoped = rule(
+        "no-println",
+        Severity::Info,
+        "avoid println! in committed code",
+        None,
+        r#"
+        (macro_invocation
+          macro: (identifier) @name
+          (#eq? @name "println")) @match
+        "#,
+    );
+    scoped.include = vec!["fixtures/engine/*.rs".into()];
+
+    let tests_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let config = Config {
+        version: 1,
+        settings: Settings::default(),
+        rules: vec![scoped],
+        warnings: Vec::new(),
+        root_dir: tests_root,
+        root_config: PathBuf::from("lintropy.yaml"),
+    };
+
+    let diagnostics = engine::run(&config, &[fixture_path("sample.rs")]).unwrap();
+    assert_eq!(diagnostics.len(), 1);
 }
 
 fn normalize_paths<T: serde::Serialize>(value: T) -> Value {

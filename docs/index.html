@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lintropy</title>
+    <meta
+      name="description"
+      content="Lintropy is a repo-local linter for rules your codebase actually cares about."
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <a class="brand" href="./">
+          <span class="brand-mark"></span>
+          <span>Lintropy</span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#why">Why</a>
+          <a href="#rule">Rule</a>
+          <a href="#start">Start</a>
+          <a href="https://github.com/Typiqally/lintropy">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <p class="eyebrow">Repo-local linting</p>
+          <h1>The linter for rules your repo actually cares about.</h1>
+          <p class="lede">
+            Put architecture boundaries, banned APIs, migration policy, and
+            agent guardrails in version control. One root config. Small YAML
+            rule files. Structural matching for Rust.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#start">Get started</a>
+            <a class="button button-secondary" href="https://github.com/Typiqally/lintropy">View source</a>
+          </div>
+
+          <ul class="feature-list" id="why">
+            <li><strong>Repo-local:</strong> rules live with the code they govern.</li>
+            <li><strong>Structural:</strong> Rust rules use tree-sitter queries, not brittle grep.</li>
+            <li><strong>Practical:</strong> messages, severity, and autofix stay in one place.</li>
+            <li><strong>Agent-friendly:</strong> explicit enough for humans, simple enough for coding agents.</li>
+          </ul>
+        </section>
+
+        <section class="showcase" aria-label="Lintropy examples">
+          <div class="terminal-card">
+            <div class="window-bar">
+              <span></span><span></span><span></span>
+            </div>
+            <pre><code>$ lintropy check .
+
+warning[no-unwrap]: avoid .unwrap() on `client`
+  --> src/handlers/users.rs:42:18
+  help: replace with `client.expect("TODO: handle error")`
+
+error[api-only-in-src-api]: API handlers must live under src/api/
+  --> src/features/users/create_user.rs:1:1
+
+Summary: 1 error, 1 warning, 2 files affected.</code></pre>
+          </div>
+
+          <div class="rule-card" id="rule">
+            <p class="small-label">Example rule</p>
+            <pre><code>severity: warning
+message: "avoid .unwrap() on `{{recv}}`"
+fix: '{{recv}}.expect("TODO: handle error")'
+language: rust
+query: |
+  (call_expression
+    function: (field_expression
+      value: (_) @recv
+      field: (field_identifier) @method)
+    (#eq? @method "unwrap")) @match</code></pre>
+          </div>
+        </section>
+
+        <section class="sections">
+          <article class="section-row">
+            <h2>Rules live in the repo.</h2>
+            <p>
+              Review them like code. Change them with the codebase. Stop hiding
+              project policy in wiki pages, onboarding calls, and reviewer lore.
+            </p>
+          </article>
+
+          <article class="section-row">
+            <h2>Simple shape.</h2>
+            <p>
+              A root <code>lintropy.yaml</code>. A <code>.lintropy/</code>
+              folder. One rule per file, or grouped rules where that helps.
+            </p>
+          </article>
+
+          <article class="section-row">
+            <h2>Good for real engineering constraints.</h2>
+            <p>
+              Use it for architecture boundaries, migration rules, banned
+              macros, dated deprecations, naming conventions, or repo-specific
+              review policy that generic linters will never know.
+            </p>
+          </article>
+        </section>
+
+        <section class="start" id="start">
+          <div class="start-copy">
+            <p class="eyebrow">Start</p>
+            <h2>From zero to a rule in a minute.</h2>
+            <p>
+              Install it, scaffold the config, then run it against your repo.
+            </p>
+          </div>
+
+          <div class="start-steps">
+            <div class="step">
+              <p class="small-label">Install</p>
+              <pre><code>brew tap Typiqally/lintropy
+brew install lintropy</code></pre>
+            </div>
+
+            <div class="step">
+              <p class="small-label">Or build from source</p>
+              <pre><code>cargo install --path .</code></pre>
+            </div>
+
+            <div class="step">
+              <p class="small-label">Scaffold and run</p>
+              <pre><code>lintropy init
+lintropy check .</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <p>
+            Full project details, editor setup, schemas, and the example fixture
+            live in the repository README.
+          </p>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>

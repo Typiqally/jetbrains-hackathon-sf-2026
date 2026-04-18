@@ -55,6 +55,37 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   language from the file extension by default; `--lang <name>` remains
   as an explicit override. Error messages list every compiled-in
   language so the user sees exactly what is available.
+- **Language server.** `lintropy lsp` subcommand runs a `tower-lsp`-backed
+  Language Server Protocol server over stdio. Publishes diagnostics on
+  `didOpen`/`didChange`/`didSave`, applies `TextDocumentSyncKind::INCREMENTAL`
+  range edits in place, exposes autofixes as `CodeAction` + `WorkspaceEdit`
+  quickfixes, and reloads the rule set on `.lintropy/**/*.yaml` changes via
+  `didChangeWatchedFiles`.
+- **VS Code / Cursor extension.** `editors/vscode/lintropy/` packages a
+  `vscode-languageclient`-based extension that spawns `lintropy lsp` and
+  surfaces diagnostics, quickfixes, and config reload inside the editor.
+  Settings: `lintropy.enable`, `lintropy.path`, `lintropy.trace.server`.
+  Release workflow publishes `lintropy-<version>.vsix` as a GitHub release
+  asset alongside the CLI tarballs.
+- **JetBrains integration.** `editors/jetbrains/README.md` documents the
+  LSP4IJ-based setup that works on all JetBrains IDEs including free
+  Community editions.
+- **Init scaffolding.** `lintropy init` now creates
+  `.vscode/extensions.json` recommending `lintropy.lintropy` +
+  `redhat.vscode-yaml`. Skipped when the file already exists.
+- **One-command editor install.** `lintropy install-lsp-extension vscode|cursor`
+  downloads the matching `.vsix` from the GitHub release and hands it to
+  `code`/`cursor --install-extension`. `lintropy install-lsp-template jetbrains`
+  unpacks the embedded LSP4IJ custom template so users can import it with
+  pre-filled fields (name, command, `*.rs → rust` mapping).
+- **Auto-download binary.** The VS Code / Cursor extension resolves the
+  `lintropy` binary via: `lintropy.path` → PATH → GitHub Release download
+  into the extension's global storage. New `lintropy.binarySource` setting
+  (`auto` by default) controls the auto-download fallback.
+- **LSP4IJ template committed.** `editors/jetbrains/lsp4ij-template/` ships
+  the end-user template; `editors/jetbrains/lsp4ij-template-dev/` ships the
+  `$PROJECT_DIR$/target/debug/lintropy` variant for contributors iterating
+  on the server.
 
 ### Changed
 
@@ -68,4 +99,4 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   three additional tree-sitter grammars. `--no-default-features`
   produces a Rust-only build of the same size as before.
 
-[0.1.0]: https://github.com/anthropics/lintropy/releases/tag/v0.1.0
+[0.1.0]: https://github.com/Typiqally/lintropy/releases/tag/v0.1.0

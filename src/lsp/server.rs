@@ -181,7 +181,7 @@ impl LanguageServer for Backend {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
+                    TextDocumentSyncKind::INCREMENTAL,
                 )),
                 code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                 ..ServerCapabilities::default()
@@ -212,13 +212,18 @@ impl LanguageServer for Backend {
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri.clone();
-        // We advertised `TextDocumentSyncKind::FULL`, so there is exactly
-        // one content-change entry carrying the whole new buffer.
-        if let Some(change) = params.content_changes.into_iter().next() {
+        let version = params.text_document.version;
+        // `TextDocumentSyncKind::INCREMENTAL`: `content_changes` is an
+        // ordered list of edits that must be applied in sequence. Each
+        // `range == None` is a full-buffer replace; each `range == Some`
+        // patches only that UTF-16 range.
+        {
             let mut state = self.state.lock().await;
-            state
-                .documents
-                .set(uri.clone(), change.text, params.text_document.version);
+            for change in params.content_changes {
+                state
+                    .documents
+                    .apply_edit(&uri, change.range, &change.text, version);
+            }
         }
         self.publish_for(&uri).await;
     }

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::core::{engine, fix, suppress, Diagnostic, Severity, SourceCache, Summary};
+use crate::core::{engine, fix, suppress, Config, Diagnostic, Severity, SourceCache, Summary};
 use crate::output::{
     json::JsonReporter, text::TextReporter, OutputFormat as LoFormat, OutputSink, Reporter,
 };
@@ -19,7 +19,7 @@ use crate::exit::{CliError, EXIT_FAIL_ON, EXIT_OK};
 use crate::walk;
 
 pub fn run(args: CheckArgs) -> Result<u8, CliError> {
-    let config = load_config(args.config.as_deref())?;
+    let config = load_check_config(&args)?;
     print_warnings(&config);
 
     let files = walk::expand(&args.paths)?;
@@ -65,6 +65,18 @@ pub fn run(args: CheckArgs) -> Result<u8, CliError> {
     }
 
     Ok(exit_code_for(&survivors, config.settings.fail_on))
+}
+
+fn load_check_config(args: &CheckArgs) -> Result<Config, CliError> {
+    if let Some(path) = args.config.as_deref() {
+        return Ok(Config::load_from_path(path)?);
+    }
+
+    if let Some(start) = args.paths.first() {
+        return Ok(Config::load_from_root(start)?);
+    }
+
+    load_config(None)
 }
 
 fn run_engine(

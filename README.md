@@ -2,7 +2,7 @@
 
 # 🌿 Lintropy
 
-**The linter for rules your repo actually cares about.**
+**Repo-native linting for architecture, boundaries, and team-specific rules.**
 
 [![ci](https://github.com/Typiqally/lintropy/actions/workflows/ci.yaml/badge.svg)](https://github.com/Typiqally/lintropy/actions/workflows/ci.yaml)
 [![release](https://img.shields.io/github/v/release/Typiqally/lintropy?include_prereleases&sort=semver)](https://github.com/Typiqally/lintropy/releases)
@@ -15,6 +15,16 @@
 </div>
 
 ---
+
+Lintropy is a linter for rules your repo actually cares about. It started at
+[The IDE Reimagined: JetBrains Codex Hackathon](https://cerebralvalley.ai/e/jetbrains-x-openai-hack),
+a two-day San Francisco event focused on building AI-powered developer tools
+alongside JetBrains and OpenAI engineers.
+
+> [!WARNING]
+> This project began as hackathon code and is not actively maintained right
+> now. Expect rough edges, incomplete features, and bugs before using it in
+> production workflows.
 
 Most linters ship a fixed catalog. Lintropy does the opposite: rules live in
 your repo, one YAML file at a time, describing **your** conventions:
@@ -232,6 +242,34 @@ The YAML schemas and the injected TextMate grammar work together: schema-backed
 validation for the file shape, TextMate syntax highlighting for the embedded
 S-expression.
 
+#### Live diagnostics (LSP)
+
+One-command install — downloads the matching `.vsix` from the GitHub
+release and hands it to the editor CLI:
+
+```console
+lintropy install-lsp-extension vscode     # or: cursor
+```
+
+Once installed, the extension resolves the `lintropy` binary in this order:
+explicit `lintropy.path` setting → PATH lookup → automatic download from
+the matching GitHub release into the extension's global storage (controlled
+by `lintropy.binarySource`). So `code --install-extension` followed by
+opening a Rust file is sufficient even on a machine where `lintropy` is
+not on PATH.
+
+Other settings: `lintropy.enable`, `lintropy.trace.server`, `lintropy.binarySource`
+(see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
+
+Contributors with a checkout can build + install the local `.vsix` directly:
+
+```console
+cd editors/vscode/lintropy
+npm install && npm run compile
+npx vsce package -o lintropy.vsix
+code --install-extension lintropy.vsix
+```
+
 ### JetBrains IDEs
 
 Shared mappings live in `.idea/jsonSchemas.xml`, pointing JetBrains IDEs at the
@@ -255,6 +293,26 @@ Then in JetBrains IDEs: `Settings → Editor → TextMate Bundles → +` and sel
 the extracted `Lintropy Query.tmbundle` directory. The bundle adds a TextMate
 injection that highlights YAML `query: |` blocks using the same
 `source.lintropy-query` grammar as the VS Code / Cursor extension.
+
+#### Live diagnostics (LSP)
+
+JetBrains IDEs plug into `lintropy lsp` through the
+[LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) community plugin.
+Works on all JetBrains IDEs including free Community editions.
+
+Fast path — unpack the embedded LSP4IJ template, then import it:
+
+```console
+lintropy install-lsp-template jetbrains --dir ~/.lintropy
+```
+
+Then in your IDE: `View → Tool Windows → LSP Console → + → New Language
+Server → Template → Import from directory...` and pick
+`~/.lintropy/lsp4ij-template`. All fields (name, command, `*.rs → rust`
+mapping) are pre-filled.
+
+Full walkthrough including manual-setup fallback and troubleshooting:
+[`editors/jetbrains/README.md`](editors/jetbrains/README.md).
 
 ## Status
 

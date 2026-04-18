@@ -51,6 +51,7 @@ pub struct PreparedRules<'a> {
 
 struct ScopedRule<'a> {
     rule: &'a RuleConfig,
+    root_dir: &'a Path,
     include: Option<Arc<GlobSet>>,
     exclude: Option<Arc<GlobSet>>,
 }
@@ -68,6 +69,7 @@ impl<'a> PreparedRules<'a> {
             }
             let scoped = ScopedRule {
                 rule,
+                root_dir: &config.root_dir,
                 include: compile_globs(&rule.include)?,
                 exclude: compile_globs(&rule.exclude)?,
             };
@@ -141,6 +143,11 @@ impl<'a> PreparedRules<'a> {
     }
 }
 
+fn run_file_from_disk(prepared: &PreparedRules<'_>, path: &Path) -> Result<Vec<Diagnostic>> {
+    let src = std::fs::read(path)?;
+    prepared.lint_buffer(path, &src)
+}
+
 /// Pick the correct precompiled query for `path`.
 ///
 /// TypeScript rules are dual-compiled against the `typescript` and `tsx`
@@ -160,11 +167,6 @@ fn pick_compiled<'a>(rule: &'a RuleConfig, _path: &Path) -> &'a tree_sitter::Que
         }
     }
     &query_rule.compiled
-}
-
-fn run_file_from_disk(prepared: &PreparedRules<'_>, path: &Path) -> Result<Vec<Diagnostic>> {
-    let src = std::fs::read(path)?;
-    prepared.lint_buffer(path, &src)
 }
 
 fn compile_globs(patterns: &[String]) -> Result<Option<Arc<GlobSet>>> {
@@ -187,7 +189,16 @@ fn compile_globs(patterns: &[String]) -> Result<Option<Arc<GlobSet>>> {
 
 impl ScopedRule<'_> {
     fn matches(&self, path: &Path) -> bool {
-        let candidate = path.to_string_lossy();
+        let owned;
+        let candidate = if let Ok(stripped) = path.strip_prefix(self.root_dir) {
+            stripped
+        } else if let Ok(canonical) = path.canonicalize() {
+            owned = canonical;
+            owned.strip_prefix(self.root_dir).unwrap_or(path)
+        } else {
+            path
+        };
+        let candidate = candidate.to_string_lossy();
         let include_ok = self
             .include
             .as_ref()
