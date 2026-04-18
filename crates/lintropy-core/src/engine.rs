@@ -103,7 +103,12 @@ fn run_file(path: &Path, rules_by_language: &RulesByLanguage<'_>) -> Result<Vec<
     let mut parser = Parser::new();
     parser
         .set_language(&language.ts_language())
-        .map_err(|err| LintropyError::Internal(format!("failed to load parser for {}: {err}", language.name())))?;
+        .map_err(|err| {
+            LintropyError::Internal(format!(
+                "failed to load parser for {}: {err}",
+                language.name()
+            ))
+        })?;
     let tree = parser
         .parse(&src, None)
         .ok_or_else(|| LintropyError::Internal(format!("failed to parse {}", path.display())))?;
@@ -122,13 +127,18 @@ fn run_file(path: &Path, rules_by_language: &RulesByLanguage<'_>) -> Result<Vec<
                 .get(query_match.pattern_index)
                 .map(Vec::as_slice)
                 .unwrap_or(&[]);
-            if !pattern_predicates
-                .iter()
-                .all(|predicate| predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, &src))
-            {
+            if !pattern_predicates.iter().all(|predicate| {
+                predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, &src)
+            }) {
                 continue;
             }
-            diagnostics.push(build_diagnostic(path, &src, scoped_rule.rule, query_rule, query_match)?);
+            diagnostics.push(build_diagnostic(
+                path,
+                &src,
+                scoped_rule.rule,
+                query_rule,
+                query_match,
+            )?);
         }
     }
 

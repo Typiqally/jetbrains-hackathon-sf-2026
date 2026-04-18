@@ -32,7 +32,9 @@ impl Reporter for JsonReporter<'_> {
                 summary,
             },
         )
-        .map_err(|error| LintropyError::Internal(format!("failed to serialize diagnostics: {error}")))?;
+        .map_err(|error| {
+            LintropyError::Internal(format!("failed to serialize diagnostics: {error}"))
+        })?;
         writeln!(self.writer)?;
         Ok(())
     }

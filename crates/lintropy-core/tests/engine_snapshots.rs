@@ -3,8 +3,7 @@ use std::path::{Path, PathBuf};
 use insta::assert_json_snapshot;
 use lintropy_core::{
     config::{Config, QueryRule, RuleConfig, RuleKind, Settings},
-    engine,
-    RuleId, Severity,
+    engine, RuleId, Severity,
 };
 use lintropy_langs::Language;
 use serde_json::Value;

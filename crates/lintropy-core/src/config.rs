@@ -220,7 +220,9 @@ impl Config {
                 &settings,
                 &mut warnings,
             )?;
-            if let Some(prev) = seen.insert(built.id.as_str().to_string(), built.source_path.clone()) {
+            if let Some(prev) =
+                seen.insert(built.id.as_str().to_string(), built.source_path.clone())
+            {
                 return Err(LintropyError::DuplicateRuleId {
                     rule_id: built.id.as_str().to_string(),
                     first: prev,

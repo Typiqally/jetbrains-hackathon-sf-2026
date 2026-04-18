@@ -151,8 +151,9 @@ fn expect_strings(predicate: &tree_sitter::QueryPredicate, start: usize) -> Resu
 }
 
 fn compile_regex(pattern: &str) -> Result<Regex> {
-    Regex::new(pattern)
-        .map_err(|err| LintropyError::Internal(format!("invalid predicate regex `{pattern}`: {err}")))
+    Regex::new(pattern).map_err(|err| {
+        LintropyError::Internal(format!("invalid predicate regex `{pattern}`: {err}"))
+    })
 }
 
 fn capture_nodes<'a>(
@@ -189,9 +190,9 @@ fn has_sibling(node: Node<'_>, kinds: &[String]) -> bool {
     };
 
     let mut cursor = parent.walk();
-    let has_match = parent.children(&mut cursor).any(|child| {
-        child != node && kinds.iter().any(|kind| kind == child.kind())
-    });
+    let has_match = parent
+        .children(&mut cursor)
+        .any(|child| child != node && kinds.iter().any(|kind| kind == child.kind()));
     has_match
 }
 
@@ -241,7 +242,8 @@ mod tests {
     use tree_sitter::{Parser, Query, QueryCursor};
 
     use super::{
-        has_ancestor, parse_general_predicates, parse_general_predicates_by_pattern, CustomPredicate,
+        has_ancestor, parse_general_predicates, parse_general_predicates_by_pattern,
+        CustomPredicate,
     };
 
     fn rust_tree(src: &str) -> tree_sitter::Tree {
@@ -293,7 +295,8 @@ mod tests {
             .matches(&query, tree.root_node(), src.as_bytes())
             .next()
             .unwrap();
-        let recv = m.captures
+        let recv = m
+            .captures
             .iter()
             .find(|capture| capture.index == query.capture_index_for_name("recv").unwrap())
             .unwrap()

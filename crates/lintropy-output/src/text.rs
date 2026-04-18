@@ -80,7 +80,11 @@ impl Reporter for TextReporter<'_> {
                 "   = rule defined in: {}",
                 diagnostic.rule_source.display()
             )?;
-            writeln!(self.writer, "   = see: lintropy explain {}", diagnostic.rule_id)?;
+            writeln!(
+                self.writer,
+                "   = see: lintropy explain {}",
+                diagnostic.rule_id
+            )?;
             if let Some(docs_url) = &diagnostic.docs_url {
                 writeln!(self.writer, "   = docs: {docs_url}")?;
             }
@@ -106,7 +110,9 @@ fn caret_len(diagnostic: &Diagnostic, source_line: &str) -> usize {
         diagnostic.end_column - diagnostic.column
     } else {
         let line_len = source_line.chars().count();
-        line_len.saturating_sub(diagnostic.column.saturating_sub(1)).max(1)
+        line_len
+            .saturating_sub(diagnostic.column.saturating_sub(1))
+            .max(1)
     }
 }
 
@@ -127,7 +133,11 @@ fn render_summary(diagnostics: &[Diagnostic], _summary: &Summary) -> String {
         .count();
 
     if errors > 0 {
-        counts.push(format!("{} {}", errors, pluralize(errors, "error", "errors")));
+        counts.push(format!(
+            "{} {}",
+            errors,
+            pluralize(errors, "error", "errors")
+        ));
     }
     if warnings > 0 {
         counts.push(format!(
@@ -172,5 +182,9 @@ fn render_summary(diagnostics: &[Diagnostic], _summary: &Summary) -> String {
 }
 
 fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) -> &'a str {
-    if count == 1 { singular } else { plural }
+    if count == 1 {
+        singular
+    } else {
+        plural
+    }
 }

@@ -34,7 +34,12 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
-    pub fn color_choice(self, no_color: bool, has_output_path: bool, stdout_is_tty: bool) -> ColorChoice {
+    pub fn color_choice(
+        self,
+        no_color: bool,
+        has_output_path: bool,
+        stdout_is_tty: bool,
+    ) -> ColorChoice {
         if no_color || has_output_path || matches!(self, Self::Json) || !stdout_is_tty {
             ColorChoice::Never
         } else {

@@ -6,7 +6,9 @@ use std::{
 
 use insta::{assert_json_snapshot, assert_snapshot};
 use lintropy_core::{Diagnostic, FixHunk, RuleId, Severity, Summary};
-use lintropy_output::{ColorChoice, JsonReporter, OutputFormat, OutputSink, Reporter, TextReporter};
+use lintropy_output::{
+    ColorChoice, JsonReporter, OutputFormat, OutputSink, Reporter, TextReporter,
+};
 use tempfile::TempDir;
 
 #[test]
@@ -270,7 +272,6 @@ impl DiagnosticBuilder {
         self.diagnostic.message = message.to_string();
         self.diagnostic
     }
-
 }
 
 fn with_fix(mut diagnostic: Diagnostic, replacement: &str) -> Diagnostic {
