@@ -28,3 +28,6 @@ ignore = "0.4"
 globset = "0.4"
 similar = "2"
 tempfile = "3"
+clap = { version = "4", features = ["derive"] }
+assert_cmd = "2"
+predicates = "3"
