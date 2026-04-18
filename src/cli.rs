@@ -43,6 +43,12 @@ pub enum Command {
     /// Unpack the embedded TextMate bundle (JetBrains `query` highlighting).
     #[command(name = "install-textmate-bundle")]
     InstallTextmateBundle(InstallTextmateBundleArgs),
+    /// Install the lintropy LSP client extension into VS Code / Cursor.
+    #[command(name = "install-lsp-extension")]
+    InstallLspExtension(InstallLspExtensionArgs),
+    /// Unpack the embedded LSP4IJ template (JetBrains LSP client).
+    #[command(name = "install-lsp-template")]
+    InstallLspTemplate(InstallLspTemplateArgs),
     /// Run the Language Server Protocol backend over stdio.
     Lsp,
 }
@@ -283,6 +289,64 @@ pub struct InstallTextmateBundleArgs {
     pub dir: Option<PathBuf>,
 
     /// Overwrite an existing bundle dir in place.
+    #[arg(long)]
+    pub force: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum LspExtensionEditor {
+    /// Install into VS Code via the `code` CLI.
+    Vscode,
+    /// Install into Cursor via the `cursor` CLI.
+    Cursor,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallLspExtensionArgs {
+    /// Target editor. Required unless `--package-only` is set.
+    #[arg(value_enum)]
+    pub editor: Option<LspExtensionEditor>,
+
+    /// Install into a named editor profile.
+    #[arg(long, value_name = "NAME")]
+    pub profile: Option<String>,
+
+    /// Override the version of the `.vsix` to download. Defaults to the
+    /// CLI's own version (so the extension matches the binary exactly).
+    #[arg(long, value_name = "VERSION")]
+    pub version: Option<String>,
+
+    /// Source a pre-downloaded `.vsix` instead of hitting the network.
+    #[arg(long, value_name = "PATH")]
+    pub vsix: Option<PathBuf>,
+
+    /// Write the downloaded `.vsix` to disk instead of invoking the editor.
+    #[arg(long = "package-only")]
+    pub package_only: bool,
+
+    /// Output path for `--package-only`. Defaults to `./lintropy-<version>.vsix`.
+    #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
+    pub output: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum LspTemplateEditor {
+    /// LSP4IJ custom template (JetBrains IDEs).
+    Jetbrains,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallLspTemplateArgs {
+    /// Target editor family.
+    #[arg(value_enum)]
+    pub editor: LspTemplateEditor,
+
+    /// Directory to unpack the template into. Defaults to the current
+    /// working directory; the template dir is created beneath it.
+    #[arg(long, value_name = "PATH")]
+    pub dir: Option<PathBuf>,
+
+    /// Overwrite an existing template dir in place.
     #[arg(long)]
     pub force: bool,
 }
