@@ -71,7 +71,7 @@ impl Language {
             #[cfg(feature = "lang-python")]
             Language::Python => &["py", "pyi"],
             #[cfg(feature = "lang-typescript")]
-            Language::TypeScript => &["ts", "tsx", "mts", "cts"],
+            Language::TypeScript => &["ts", "tsx", "mts", "cts", "d.ts"],
         }
     }
 
