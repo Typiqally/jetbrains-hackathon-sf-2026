@@ -171,16 +171,28 @@ For `query: |` blocks, the repo also ships a local TextMate-powered extension
 at `editors/vscode/lintropy-query-syntax/`. It injects `source.lintropy-query`
 highlighting into YAML block scalars whose key is `query`.
 
-Install it in VS Code or Cursor from the folder, or package it first:
+Install it with the convenience script:
 
 ```console
-cd editors/vscode/lintropy-query-syntax
-npx @vscode/vsce package
+./scripts/install-query-extension.sh vscode
+./scripts/install-query-extension.sh cursor
 ```
 
-Then install the resulting `.vsix` in VS Code / Cursor. The YAML schemas and
-the injected TextMate grammar work together: schema-backed validation for the
-file shape, TextMate syntax highlighting for the embedded S-expression.
+Optional profile selection:
+
+```console
+./scripts/install-query-extension.sh cursor --profile "Default"
+```
+
+If you only want the packaged artifact without installing it:
+
+```console
+./scripts/install-query-extension.sh vscode --package-only
+```
+
+The YAML schemas and the injected TextMate grammar work together: schema-backed
+validation for the file shape, TextMate syntax highlighting for the embedded
+S-expression.
 
 ### JetBrains IDEs
 
