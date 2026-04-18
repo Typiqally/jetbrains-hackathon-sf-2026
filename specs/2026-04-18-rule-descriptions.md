@@ -286,6 +286,28 @@ to demonstrate the field and to keep the repo's dogfood fixture realistic:
 
 These are illustrative only; wording is at the implementer's discretion.
 
+### 9.1 `skill/SKILL.md` updates (WP6 artefact)
+
+SKILL.md is the agent-facing guide installed by `lintropy init --with-skill`.
+For generated rules to carry descriptions by default, the skill must
+advertise the field and model it in every example. Changes:
+
+- Add a `description` row to the field reference table in §3. Mark it
+  as **required when generating rules** even though the loader accepts
+  its absence (the loader is permissive; the skill is prescriptive).
+- Add a short paragraph distinguishing `description` from `message`.
+- Add a `description:` line to every example rule in the document: the
+  annotated single-rule example (§3), the multi-rule example (§3), the
+  two match-rule examples (§5), and all recipes in §6.
+- Add a new anti-pattern entry in §9: *"Don't ship a rule without a
+  `description`."* One or two sentences minimum — what the rule catches
+  and why it matters.
+- Bump the `# version:` comment at the top of SKILL.md.
+
+These edits land with the implementation, not before it — SKILL.md is
+embedded into the CLI binary at build time (`include_str!`), so they
+ship as part of the same release.
+
 ## 10. File-level summary of changes
 
 | File | Change |
@@ -298,6 +320,7 @@ These are illustrative only; wording is at the implementer's discretion.
 | `crates/lintropy-cli/tests/rules_describe.rs` | New test file covering §8.2. |
 | `crates/lintropy-cli/tests/explain_describe.rs` | New test file covering `explain` cases. |
 | `.lintropy/no-unwrap.rule.yaml`, `no-todo.rule.yaml`, `no-dbg.rule.yaml` | Backfill `description`. |
+| `skill/SKILL.md` | Add `description` to field reference table; annotate all recipe examples; add "always include description" anti-pattern entry; bump skill version. |
 
 ## 11. Out-of-scope follow-ups
 
