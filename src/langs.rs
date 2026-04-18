@@ -9,6 +9,9 @@ use tree_sitter::Language as TsLanguage;
 pub enum Language {
     /// `tree-sitter-rust`.
     Rust,
+    #[cfg(feature = "lang-go")]
+    /// `tree-sitter-go`.
+    Go,
 }
 
 impl Language {
@@ -16,6 +19,8 @@ impl Language {
     pub fn from_name(name: &str) -> Option<Language> {
         match name {
             "rust" => Some(Language::Rust),
+            #[cfg(feature = "lang-go")]
+            "go" => Some(Language::Go),
             _ => None,
         }
     }
@@ -24,6 +29,8 @@ impl Language {
     pub fn from_extension(ext: &str) -> Option<Language> {
         match ext {
             "rs" => Some(Language::Rust),
+            #[cfg(feature = "lang-go")]
+            "go" => Some(Language::Go),
             _ => None,
         }
     }
@@ -32,6 +39,8 @@ impl Language {
     pub fn name(self) -> &'static str {
         match self {
             Language::Rust => "rust",
+            #[cfg(feature = "lang-go")]
+            Language::Go => "go",
         }
     }
 
@@ -39,6 +48,8 @@ impl Language {
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
             Language::Rust => &["rs"],
+            #[cfg(feature = "lang-go")]
+            Language::Go => &["go"],
         }
     }
 
@@ -49,6 +60,8 @@ impl Language {
     pub fn ts_language(self, _path: &std::path::Path) -> TsLanguage {
         match self {
             Language::Rust => tree_sitter_rust::language(),
+            #[cfg(feature = "lang-go")]
+            Language::Go => tree_sitter_go::language(),
         }
     }
 }
@@ -67,6 +80,7 @@ mod tests {
     #[test]
     fn from_extension_rust() {
         assert_eq!(Language::from_extension("rs"), Some(Language::Rust));
+        #[cfg(not(feature = "lang-go"))]
         assert_eq!(Language::from_extension("go"), None);
         assert!(Language::Rust.extensions().contains(&"rs"));
     }
@@ -77,6 +91,30 @@ mod tests {
         let mut parser = tree_sitter::Parser::new();
         parser.set_language(&lang).unwrap();
         let tree = parser.parse("fn main() {}", None).unwrap();
+        assert_eq!(tree.root_node().kind(), "source_file");
+    }
+
+    #[cfg(feature = "lang-go")]
+    #[test]
+    fn from_name_resolves_go() {
+        assert_eq!(Language::from_name("go"), Some(Language::Go));
+        assert_eq!(Language::Go.name(), "go");
+    }
+
+    #[cfg(feature = "lang-go")]
+    #[test]
+    fn from_extension_resolves_go() {
+        assert_eq!(Language::from_extension("go"), Some(Language::Go));
+        assert!(Language::Go.extensions().contains(&"go"));
+    }
+
+    #[cfg(feature = "lang-go")]
+    #[test]
+    fn go_ts_language_parses_hello_world() {
+        let lang = Language::Go.ts_language(std::path::Path::new("t.go"));
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&lang).unwrap();
+        let tree = parser.parse("package main\nfunc main() {}", None).unwrap();
         assert_eq!(tree.root_node().kind(), "source_file");
     }
 }
