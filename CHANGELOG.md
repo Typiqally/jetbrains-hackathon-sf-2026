@@ -62,5 +62,18 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
 - **Init scaffolding.** `lintropy init` now creates
   `.vscode/extensions.json` recommending `lintropy.lintropy` +
   `redhat.vscode-yaml`. Skipped when the file already exists.
+- **One-command editor install.** `lintropy install-lsp-extension vscode|cursor`
+  downloads the matching `.vsix` from the GitHub release and hands it to
+  `code`/`cursor --install-extension`. `lintropy install-lsp-template jetbrains`
+  unpacks the embedded LSP4IJ custom template so users can import it with
+  pre-filled fields (name, command, `*.rs → rust` mapping).
+- **Auto-download binary.** The VS Code / Cursor extension resolves the
+  `lintropy` binary via: `lintropy.path` → PATH → GitHub Release download
+  into the extension's global storage. New `lintropy.binarySource` setting
+  (`auto` by default) controls the auto-download fallback.
+- **LSP4IJ template committed.** `editors/jetbrains/lsp4ij-template/` ships
+  the end-user template; `editors/jetbrains/lsp4ij-template-dev/` ships the
+  `$PROJECT_DIR$/target/debug/lintropy` variant for contributors iterating
+  on the server.
 
-[0.1.0]: https://github.com/anthropics/lintropy/releases/tag/v0.1.0
+[0.1.0]: https://github.com/Typiqally/lintropy/releases/tag/v0.1.0

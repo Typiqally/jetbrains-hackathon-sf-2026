@@ -234,20 +234,31 @@ S-expression.
 
 #### Live diagnostics (LSP)
 
-For inline red squigglies, hover messages, and quickfix lightbulbs, install
-the `lintropy` extension (`editors/vscode/lintropy/`):
+One-command install — downloads the matching `.vsix` from the GitHub
+release and hands it to the editor CLI:
+
+```console
+lintropy install-lsp-extension vscode     # or: cursor
+```
+
+Once installed, the extension resolves the `lintropy` binary in this order:
+explicit `lintropy.path` setting → PATH lookup → automatic download from
+the matching GitHub release into the extension's global storage (controlled
+by `lintropy.binarySource`). So `code --install-extension` followed by
+opening a Rust file is sufficient even on a machine where `lintropy` is
+not on PATH.
+
+Other settings: `lintropy.enable`, `lintropy.trace.server`, `lintropy.binarySource`
+(see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
+
+Contributors with a checkout can build + install the local `.vsix` directly:
 
 ```console
 cd editors/vscode/lintropy
-npm install
-npm run compile
+npm install && npm run compile
 npx vsce package -o lintropy.vsix
-code --install-extension lintropy.vsix      # or: cursor --install-extension ...
+code --install-extension lintropy.vsix
 ```
-
-The extension spawns `lintropy lsp` as a subprocess and streams diagnostics
-over LSP. Settings: `lintropy.enable`, `lintropy.path`, `lintropy.trace.server`
-(see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
 
 ### JetBrains IDEs
 
@@ -277,12 +288,21 @@ injection that highlights YAML `query: |` blocks using the same
 
 JetBrains IDEs plug into `lintropy lsp` through the
 [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) community plugin.
-Full setup walkthrough (works on free Community editions too):
-[`editors/jetbrains/README.md`](editors/jetbrains/README.md).
+Works on all JetBrains IDEs including free Community editions.
 
-Short version: install LSP4IJ, add a new server with command `lintropy lsp`,
-map `*.rs → rust`. You get the same live diagnostics and quickfixes as the
-VS Code extension, routed through the standard JetBrains inspection UI.
+Fast path — unpack the embedded LSP4IJ template, then import it:
+
+```console
+lintropy install-lsp-template jetbrains --dir ~/.lintropy
+```
+
+Then in your IDE: `View → Tool Windows → LSP Console → + → New Language
+Server → Template → Import from directory...` and pick
+`~/.lintropy/lsp4ij-template`. All fields (name, command, `*.rs → rust`
+mapping) are pre-filled.
+
+Full walkthrough including manual-setup fallback and troubleshooting:
+[`editors/jetbrains/README.md`](editors/jetbrains/README.md).
 
 ## Status
 
