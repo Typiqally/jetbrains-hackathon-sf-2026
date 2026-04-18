@@ -116,3 +116,45 @@ fn rules_text_group_by_language_produces_rust_group() {
         );
     }
 }
+
+#[test]
+fn rules_text_group_by_tag_first_tag_wins_untagged_last() {
+    let fx = DescribeFixture::new();
+    let out = run_rules(&fx, &["--group-by", "tag"])
+        .code(0)
+        .get_output()
+        .stdout
+        .clone();
+    let text = String::from_utf8(out).unwrap();
+
+    let noise_idx = text
+        .find("noise\n-----")
+        .expect("noise group header");
+    let reliability_idx = text
+        .find("reliability\n-----------")
+        .expect("reliability group header");
+    let untagged_idx = text
+        .find("(untagged)\n----------")
+        .expect("(untagged) group header");
+
+    assert!(noise_idx < reliability_idx);
+    assert!(reliability_idx < untagged_idx);
+
+    // no-unwrap should appear under reliability group only, not duplicated under another tag.
+    // The rule has tags ["reliability", "rust"] but first-tag-wins means it goes under "reliability".
+    let reliability_section_end = text[reliability_idx..]
+        .find("\n\n(untagged)")
+        .unwrap_or_else(|| text[reliability_idx..].len());
+    let reliability_section = &text[reliability_idx..reliability_idx + reliability_section_end];
+    assert!(
+        reliability_section.contains("no-unwrap"),
+        "no-unwrap should be in reliability section"
+    );
+
+    // No stray `rust` group header — "rust" is a language, not a tag, so it should never
+    // appear as a group. This assertion guards against mishandling the "rust" tag value.
+    assert!(
+        !text.contains("rust\n----"),
+        "no rust group header should exist"
+    );
+}
