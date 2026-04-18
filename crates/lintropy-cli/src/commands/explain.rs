@@ -1,6 +1,6 @@
 //! `lintropy explain <rule-id>` — pretty-print a single rule.
 
-use lintropy_core::{RuleConfig, RuleKind};
+use lintropy_core::{RuleConfig, RuleKind, Severity};
 
 use crate::cli::ExplainArgs;
 use crate::commands::{load_config, print_warnings};
@@ -23,7 +23,7 @@ pub fn run(args: ExplainArgs) -> Result<u8, CliError> {
 
 fn print_rule(rule: &RuleConfig) {
     println!("rule:     {}", rule.id);
-    println!("severity: {:?}", rule.severity);
+    println!("severity: {}", severity_label(rule.severity));
     if let Some(lang) = rule.language {
         println!("language: {}", lang.name());
     }
@@ -45,6 +45,14 @@ fn print_rule(rule: &RuleConfig) {
     println!("message:");
     for line in rule.message.lines() {
         println!("  {line}");
+    }
+
+    if let Some(desc) = &rule.description {
+        println!();
+        println!("description:");
+        for line in wrap_for_terminal(desc) {
+            println!("  {line}");
+        }
     }
 
     match &rule.kind {
@@ -76,4 +84,39 @@ fn print_rule(rule: &RuleConfig) {
             println!("  {line}");
         }
     }
+}
+
+fn severity_label(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Error => "error",
+        Severity::Warning => "warning",
+        Severity::Info => "info",
+    }
+}
+
+fn wrap_for_terminal(text: &str) -> Vec<String> {
+    const WRAP_WIDTH: usize = 100;
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if line.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        let mut current = String::new();
+        for word in line.split_whitespace() {
+            if current.is_empty() {
+                current.push_str(word);
+            } else if current.len() + 1 + word.len() <= WRAP_WIDTH {
+                current.push(' ');
+                current.push_str(word);
+            } else {
+                out.push(std::mem::take(&mut current));
+                current.push_str(word);
+            }
+        }
+        if !current.is_empty() {
+            out.push(current);
+        }
+    }
+    out
 }
