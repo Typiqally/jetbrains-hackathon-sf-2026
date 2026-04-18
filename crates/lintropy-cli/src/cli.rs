@@ -51,6 +51,17 @@ pub enum OutputFormat {
     Json,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum GroupBy {
+    /// Flat list sorted by id (default).
+    #[default]
+    None,
+    /// Group by rule language.
+    Language,
+    /// Group by the rule's first tag.
+    Tag,
+}
+
 #[derive(Debug, Default, Args)]
 pub struct CheckArgs {
     /// Paths to scan. Defaults to ".".
@@ -100,6 +111,10 @@ pub struct RulesArgs {
     /// Emit the list as JSON.
     #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
     pub format: OutputFormat,
+
+    /// Group text output by language or first tag. Text format only.
+    #[arg(long = "group-by", value_enum, default_value_t = GroupBy::None)]
+    pub group_by: GroupBy,
 
     /// Override config discovery.
     #[arg(long, value_name = "PATH")]
