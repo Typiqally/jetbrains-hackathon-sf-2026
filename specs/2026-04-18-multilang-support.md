@@ -154,17 +154,13 @@ grammar parses type assertions `<T>x`; the `tsx` grammar parses JSX
 versa produces broken trees.
 
 All call sites (`src/core/engine.rs`, `src/commands/ts_parse.rs`, any
-other) update to pass the source file path. For call sites without a
-natural path (e.g. `ts-parse` reading stdin when the user passes
-`--lang`), the caller synthesises a placeholder path using the first
-canonical extension of the chosen language (e.g. `stdin.ts` for
-`--lang typescript`) so the dispatcher sees a valid extension. This is
-a private implementation detail and documented in the `ts-parse` source,
-not in user-facing docs.
-
-Stdin input combined with `--lang typescript` always selects the
-`typescript` (non-tsx) grammar. Parsing TSX from stdin is not supported
-in this release; users pipe to a `.tsx` file first. See §9 follow-ups.
+other) update to pass the source file path. `ts-parse` already has a
+file-path argument (`TsParseArgs.file: PathBuf`), so the path is
+directly available. For `--lang typescript` combined with a non-TS
+extension (user override), the `typescript` (non-tsx) grammar is
+selected because the path's extension is not `.tsx`. Users who want
+the tsx grammar must use a `.tsx` file; this matches §4.1 which has
+no stdin support.
 
 ### 3.6 Cargo features
 
@@ -200,10 +196,13 @@ the CHANGELOG entry (§7.3).
 
 ### 4.1 `ts-parse` auto-detect
 
-Today: `lintropy ts-parse <file> --lang rust` (required).
-New: `lintropy ts-parse <file>` with `--lang` optional.
+Today: `lintropy ts-parse <file>` already supports optional `--lang`
+override with extension-based auto-detect (`src/commands/ts_parse.rs`
+`resolve_language`). The mechanism is sound; only the error messages
+need updating to list compiled-in languages and the docs in SKILL.md
+need correction.
 
-Resolution order:
+Target resolution order (unchanged in shape, tightened in messages):
 
 1. If `--lang <name>` is provided → use `Language::from_name(name)`; on
    failure exit code 2 with
@@ -213,9 +212,9 @@ Resolution order:
 3. Else → exit code 2 with
    `could not detect language for <path> (extension not recognized); pass --lang <rust|go|python|typescript>`.
 
-`--lang` takes precedence over the extension, allowing override for
-unusual extensions or stdin. Stdin support: when input is stdin,
-`--lang` is required (cannot auto-detect). Error if absent.
+`--lang` takes precedence over the extension for unusual extensions. No
+stdin support today; `lintropy ts-parse` requires a file path. Stdin
+is out of scope here.
 
 Implementation in `src/commands/ts_parse.rs`:
 
@@ -423,6 +422,7 @@ Recorded for future design work:
 - Additional language families (Java/Kotlin/C++/Ruby).
 - Per-lang auto-detection for `lintropy check` stdin mode (today stdin
   is not a `check` input).
-- TSX grammar selection from stdin in `ts-parse` (either a `--tsx` flag,
-  a `--lang tsx` CLI-only alias, or a `--grammar <typescript|tsx>`
-  sub-flag). Current workaround: write to a `.tsx` file first.
+- TSX grammar override for `ts-parse` when the file extension is not
+  `.tsx` (e.g. `--grammar <typescript|tsx>` sub-flag). Current workaround:
+  rename / copy to a `.tsx` file first.
+- Stdin input for `ts-parse` (today requires a file path).
