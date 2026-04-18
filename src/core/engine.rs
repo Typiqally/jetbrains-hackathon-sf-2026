@@ -1,6 +1,7 @@
 //! Query execution engine.
 
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,6 +15,7 @@ use super::{
     template::{interpolate, CaptureMap},
     Diagnostic, FixHunk, LintropyError, Result,
 };
+use crate::langs::Language;
 
 /// Walk `files`, read each from disk, and lint in parallel.
 ///
@@ -44,13 +46,7 @@ pub fn run(config: &Config, files: &[PathBuf]) -> Result<Vec<Diagnostic>> {
 /// The LSP server builds this on `initialize` and reuses it across
 /// `didChange` notifications; `lintropy check` builds it once per run.
 pub struct PreparedRules<'a> {
-    rust: Vec<ScopedRule<'a>>,
-    #[cfg(feature = "lang-go")]
-    go: Vec<ScopedRule<'a>>,
-    #[cfg(feature = "lang-python")]
-    python: Vec<ScopedRule<'a>>,
-    #[cfg(feature = "lang-typescript")]
-    typescript: Vec<ScopedRule<'a>>,
+    by_language: HashMap<Language, Vec<ScopedRule<'a>>>,
 }
 
 struct ScopedRule<'a> {
@@ -62,13 +58,7 @@ struct ScopedRule<'a> {
 impl<'a> PreparedRules<'a> {
     /// Compile every query rule in `config` into a language-indexed table.
     pub fn prepare(config: &'a Config) -> Result<Self> {
-        let mut rust = Vec::new();
-        #[cfg(feature = "lang-go")]
-        let mut go = Vec::new();
-        #[cfg(feature = "lang-python")]
-        let mut python = Vec::new();
-        #[cfg(feature = "lang-typescript")]
-        let mut typescript = Vec::new();
+        let mut by_language: HashMap<Language, Vec<ScopedRule<'a>>> = HashMap::new();
         for rule in &config.rules {
             let Some(language) = rule.language else {
                 continue;
@@ -81,25 +71,9 @@ impl<'a> PreparedRules<'a> {
                 include: compile_globs(&rule.include)?,
                 exclude: compile_globs(&rule.exclude)?,
             };
-            match language {
-                crate::langs::Language::Rust => rust.push(scoped),
-                #[cfg(feature = "lang-go")]
-                crate::langs::Language::Go => go.push(scoped),
-                #[cfg(feature = "lang-python")]
-                crate::langs::Language::Python => python.push(scoped),
-                #[cfg(feature = "lang-typescript")]
-                crate::langs::Language::TypeScript => typescript.push(scoped),
-            }
+            by_language.entry(language).or_default().push(scoped);
         }
-        Ok(Self {
-            rust,
-            #[cfg(feature = "lang-go")]
-            go,
-            #[cfg(feature = "lang-python")]
-            python,
-            #[cfg(feature = "lang-typescript")]
-            typescript,
-        })
+        Ok(Self { by_language })
     }
 
     /// Lint an in-memory buffer attributed to `path`.
@@ -112,14 +86,8 @@ impl<'a> PreparedRules<'a> {
             return Ok(Vec::new());
         };
 
-        let scoped_rules = match language {
-            crate::langs::Language::Rust => &self.rust,
-            #[cfg(feature = "lang-go")]
-            crate::langs::Language::Go => &self.go,
-            #[cfg(feature = "lang-python")]
-            crate::langs::Language::Python => &self.python,
-            #[cfg(feature = "lang-typescript")]
-            crate::langs::Language::TypeScript => &self.typescript,
+        let Some(scoped_rules) = self.by_language.get(&language) else {
+            return Ok(Vec::new());
         };
         if scoped_rules.is_empty() {
             return Ok(Vec::new());
@@ -145,23 +113,25 @@ impl<'a> PreparedRules<'a> {
                 continue;
             }
             let query_rule = scoped_rule.rule.query_rule().expect("query rule");
+            let compiled = pick_compiled(scoped_rule.rule, path);
             let mut cursor = QueryCursor::new();
-            for query_match in cursor.matches(query_rule.compiled.as_ref(), root, src) {
+            for query_match in cursor.matches(compiled, root, src) {
                 let pattern_predicates = query_rule
                     .predicates_by_pattern
                     .get(query_match.pattern_index)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]);
-                if !pattern_predicates.iter().all(|predicate| {
-                    predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, src)
-                }) {
+                if !pattern_predicates
+                    .iter()
+                    .all(|predicate| predicate.apply(&query_match, compiled, &root, src))
+                {
                     continue;
                 }
                 diagnostics.push(build_diagnostic(
                     path,
                     src,
                     scoped_rule.rule,
-                    query_rule,
+                    compiled,
                     query_match,
                 )?);
             }
@@ -169,6 +139,27 @@ impl<'a> PreparedRules<'a> {
 
         Ok(diagnostics)
     }
+}
+
+/// Pick the correct precompiled query for `path`.
+///
+/// TypeScript rules are dual-compiled against the `typescript` and `tsx`
+/// grammars (different symbol IDs), so a query compiled against one grammar
+/// won't match a parse tree produced by the other. For `.tsx` paths we return
+/// the tsx-grammar compilation; for everything else (including `.ts`,
+/// `.d.ts`, and all non-TypeScript languages) we return the primary
+/// compilation.
+fn pick_compiled<'a>(rule: &'a RuleConfig, path: &Path) -> &'a tree_sitter::Query {
+    let query_rule = rule
+        .query_rule()
+        .expect("lint_buffer only processes query rules");
+    #[cfg(feature = "lang-typescript")]
+    if path.extension().and_then(|e| e.to_str()) == Some("tsx") {
+        if let Some(tsx) = &query_rule.compiled_tsx {
+            return tsx;
+        }
+    }
+    &query_rule.compiled
 }
 
 fn run_file_from_disk(prepared: &PreparedRules<'_>, path: &Path) -> Result<Vec<Diagnostic>> {
@@ -215,12 +206,11 @@ fn build_diagnostic(
     path: &Path,
     src: &[u8],
     rule: &RuleConfig,
-    query_rule: &super::config::QueryRule,
+    compiled: &tree_sitter::Query,
     query_match: tree_sitter::QueryMatch<'_, '_>,
 ) -> Result<Diagnostic> {
-    let captures = capture_map(query_match.captures, query_rule.compiled.as_ref(), src)?;
-    let span_node = query_rule
-        .compiled
+    let captures = capture_map(query_match.captures, compiled, src)?;
+    let span_node = compiled
         .capture_index_for_name("match")
         .and_then(|match_capture| {
             query_match
