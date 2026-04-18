@@ -1,6 +1,12 @@
 use assert_cmd::Command;
 use tempfile::TempDir;
 
+fn fixture_root(lang: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/multilang")
+        .join(lang)
+}
+
 fn write(dir: &std::path::Path, rel: &str, contents: &str) {
     let path = dir.join(rel);
     if let Some(parent) = path.parent() {
@@ -37,4 +43,40 @@ query: |
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("app.tsx"), "tsx match missing: {stdout}");
     assert!(!stdout.contains("lib.ts"), "false positive on lib.ts: {stdout}");
+}
+
+#[cfg(feature = "lang-go")]
+#[test]
+fn go_fixture_flags_fmt_println() {
+    let root = fixture_root("go");
+    let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
+    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    let output = cmd.output().unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("main.go"), "expected go diag: {stdout}");
+    assert!(stdout.contains("no-println"), "rule id missing: {stdout}");
+}
+
+#[cfg(feature = "lang-python")]
+#[test]
+fn python_fixture_flags_print_call() {
+    let root = fixture_root("python");
+    let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
+    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    let output = cmd.output().unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("app.py"), "expected python diag: {stdout}");
+    assert!(stdout.contains("no-print"), "rule id missing: {stdout}");
+}
+
+#[cfg(feature = "lang-typescript")]
+#[test]
+fn typescript_fixture_flags_console_log() {
+    let root = fixture_root("typescript");
+    let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
+    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    let output = cmd.output().unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("app.ts"), "expected ts diag: {stdout}");
+    assert!(stdout.contains("no-console-log"), "rule id missing: {stdout}");
 }
