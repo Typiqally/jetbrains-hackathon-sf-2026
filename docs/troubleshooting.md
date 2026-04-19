@@ -73,10 +73,16 @@ Check:
 
 - the LSP extension or template is installed
 - the `lintropy` binary is on `PATH`, or the extension is configured to find it
-- the workspace has a valid `lintropy.yaml`
+- the file you opened has a valid ancestor `lintropy.yaml`
 - the file extension is one of the supported language extensions
 
-If in doubt, run this in the repo root:
+The LSP resolves config per file:
+
+- a nested `lintropy.yaml` replaces the parent rule context for files under that subtree
+- `.lintropy/` files merge into the context owned by the nearest `lintropy.yaml`
+- after editing or adding rule files, save them or otherwise trigger watched-file notifications so diagnostics republish
+
+If in doubt, run this from the directory whose `lintropy.yaml` should own the file:
 
 ```console
 lintropy config validate

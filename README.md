@@ -260,6 +260,12 @@ flow for the Rust files and semantic-token highlighting flows for the
 `query: |` DSL inside the YAML rule files. No separate "query syntax"
 extension to install.
 
+Config resolution is per file rather than one workspace-wide root: each
+Rust file uses the nearest ancestor `lintropy.yaml`. A newly added nested
+`lintropy.yaml` creates a fresh rule context for that subtree, while
+`.lintropy/` changes merge into the rules for the already-resolved root and
+republish diagnostics for open files.
+
 Once installed, the extension resolves the `lintropy` binary in this order:
 explicit `lintropy.path` setting → PATH lookup → automatic download from
 the matching GitHub release into the extension's global storage (controlled

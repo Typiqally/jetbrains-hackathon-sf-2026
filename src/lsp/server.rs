@@ -2,15 +2,15 @@
 //! protocol and the lintropy engine.
 //!
 //! State model:
-//! - `config` is `Arc<Mutex<Option<Config>>>` — loaded on `initialize`
-//!   from the workspace root, refreshed on `didChangeWatchedFiles`.
-//!   `None` means config load failed; we log and keep running so the
-//!   client doesn't get a hard error on startup for a broken workspace.
+//! - configs are cached per discovered `lintropy.yaml` root, so nested
+//!   projects get isolated rule contexts instead of inheriting the
+//!   workspace root's rules.
 //! - `documents` tracks the client's authoritative buffer state.
 //! - `PreparedRules` is rebuilt per lint. Glob compile is cheap and the
 //!   alternative (self-referential `PreparedRules` borrowing from `Config`)
 //!   is not worth the complexity.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ use tower_lsp::lsp_types::{
 };
 use tower_lsp::{Client, LanguageServer};
 
-use crate::core::{Config, PreparedRules};
+use crate::core::{discovery, Config, PreparedRules};
 
 fn is_rule_file(path: &std::path::Path) -> bool {
     let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
@@ -53,11 +53,18 @@ pub struct Backend {
 }
 
 struct State {
-    /// Workspace root, resolved from `initialize.workspaceFolders` (or
-    /// the deprecated `rootUri`). Used as the config-load starting point.
-    workspace_root: Option<PathBuf>,
-    config: Option<Config>,
+    /// Cached configs keyed by the specific `lintropy.yaml` that owns
+    /// a document subtree. This lets nested projects shadow parent
+    /// workspaces while still merging `.lintropy/` files inside the
+    /// resolved context.
+    configs: HashMap<PathBuf, CachedConfig>,
     documents: DocumentStore,
+}
+
+#[derive(Clone)]
+enum CachedConfig {
+    Loaded(Arc<Config>),
+    Failed,
 }
 
 impl Backend {
@@ -65,8 +72,7 @@ impl Backend {
         Self {
             client,
             state: Arc::new(Mutex::new(State {
-                workspace_root: None,
-                config: None,
+                configs: HashMap::new(),
                 documents: DocumentStore::new(),
             })),
         }
@@ -76,30 +82,50 @@ impl Backend {
         self.client.log_message(ty, message.into()).await;
     }
 
-    /// Re-load config from the workspace root (or cwd as fallback) and
-    /// swap it into `state`. Logs failures; never errors out the server.
-    async fn reload_config(&self) {
-        let root = {
-            let state = self.state.lock().await;
-            state.workspace_root.clone()
+    async fn clear_config_cache(&self) {
+        let mut state = self.state.lock().await;
+        state.configs.clear();
+    }
+
+    /// Resolve the nearest `lintropy.yaml` for `path`, loading and
+    /// caching that context on demand.
+    async fn config_for_path(&self, path: &std::path::Path) -> Option<Arc<Config>> {
+        let start = if path.is_dir() {
+            path.to_path_buf()
+        } else {
+            path.parent()
+                .map(std::path::Path::to_path_buf)
+                .unwrap_or_else(|| path.to_path_buf())
         };
-        let start = root
-            .clone()
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
-        match Config::load_from_root(&start) {
+        let root_config = discovery::find_root_config(&start).ok()?;
+
+        let cached = {
+            let state = self.state.lock().await;
+            state.configs.get(&root_config).cloned()
+        };
+        match cached {
+            Some(CachedConfig::Loaded(config)) => return Some(config),
+            Some(CachedConfig::Failed) => return None,
+            None => {}
+        }
+
+        match Config::load_from_path(&root_config) {
             Ok(config) => {
                 self.log(
                     MessageType::INFO,
                     format!(
                         "lintropy: loaded {} rules from {}",
                         config.rules.len(),
-                        start.display()
+                        config.root_dir.display()
                     ),
                 )
                 .await;
+                let config = Arc::new(config);
                 let mut state = self.state.lock().await;
-                state.config = Some(config);
+                state
+                    .configs
+                    .insert(root_config, CachedConfig::Loaded(config.clone()));
+                Some(config)
             }
             Err(err) => {
                 self.log(
@@ -108,7 +134,8 @@ impl Backend {
                 )
                 .await;
                 let mut state = self.state.lock().await;
-                state.config = None;
+                state.configs.insert(root_config, CachedConfig::Failed);
+                None
             }
         }
     }
@@ -160,18 +187,16 @@ impl Backend {
             .await;
     }
 
-    /// Core engine invocation: build `PreparedRules` from the current
-    /// config and lint the buffer. Returns `None` when no config is
-    /// loaded (client gets an empty diagnostic list — explicit signal
-    /// rather than stale data).
+    /// Core engine invocation: resolve the nearest config for `path`,
+    /// build `PreparedRules`, and lint the buffer. Returns `None` when
+    /// no config is discoverable for this path.
     async fn lint(
         &self,
         text: &str,
         path: &std::path::Path,
     ) -> Option<Vec<crate::core::Diagnostic>> {
-        let state = self.state.lock().await;
-        let config = state.config.as_ref()?;
-        let prepared = PreparedRules::prepare(config).ok()?;
+        let config = self.config_for_path(path).await?;
+        let prepared = PreparedRules::prepare(config.as_ref()).ok()?;
         prepared.lint_buffer(path, text.as_bytes()).ok()
     }
 }
@@ -179,23 +204,7 @@ impl Backend {
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, params: InitializeParams) -> JsonRpcResult<InitializeResult> {
-        let workspace_root = params
-            .workspace_folders
-            .as_ref()
-            .and_then(|folders| folders.first())
-            .and_then(|f| f.uri.to_file_path().ok())
-            .or_else(|| {
-                #[allow(deprecated)]
-                params
-                    .root_uri
-                    .as_ref()
-                    .and_then(|uri| uri.to_file_path().ok())
-            });
-
-        {
-            let mut state = self.state.lock().await;
-            state.workspace_root = workspace_root;
-        }
+        let _ = params;
 
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
@@ -254,7 +263,7 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: InitializedParams) {
-        self.reload_config().await;
+        self.clear_config_cache().await;
     }
 
     async fn shutdown(&self) -> JsonRpcResult<()> {
@@ -289,9 +298,21 @@ impl LanguageServer for Backend {
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        // Nothing to do — we lint on didChange. Republish just in case
-        // the client flushed a partial state between changes.
-        self.publish_for(&params.text_document.uri).await;
+        let is_config_file = params
+            .text_document
+            .uri
+            .to_file_path()
+            .ok()
+            .as_deref()
+            .is_some_and(is_rule_file);
+        if is_config_file {
+            self.clear_config_cache().await;
+            self.republish_all().await;
+        } else {
+            // Nothing to do — we lint on didChange. Republish just in case
+            // the client flushed a partial state between changes.
+            self.publish_for(&params.text_document.uri).await;
+        }
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
@@ -305,12 +326,12 @@ impl LanguageServer for Backend {
     }
 
     async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
-        self.reload_config().await;
+        self.clear_config_cache().await;
         self.republish_all().await;
     }
 
     async fn did_change_watched_files(&self, _params: DidChangeWatchedFilesParams) {
-        self.reload_config().await;
+        self.clear_config_cache().await;
         self.republish_all().await;
     }
 

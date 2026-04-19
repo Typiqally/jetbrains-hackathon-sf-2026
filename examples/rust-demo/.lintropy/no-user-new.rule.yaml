@@ -1,0 +1,12 @@
+severity: warning
+include: ["src/**/*.rs", "samples/dynamic/**/*.rs"]
+message: "prefer `User::builder()` over `User::new(...)` in this demo"
+language: rust
+query: |
+  (call_expression
+    function: (scoped_identifier
+      path: (_) @path
+      name: (identifier) @method)
+    arguments: (arguments)
+    (#eq? @method "new")
+    (#match? @path "(^|::)User$")) @match

@@ -44,6 +44,13 @@ and installs it into the target editor.
 
 The extension starts `lintropy lsp`, publishes diagnostics as buffers change, and exposes quickfix actions when a diagnostic carries an autofix.
 
+Config resolution is path-local:
+
+- each Rust file uses the nearest ancestor `lintropy.yaml`
+- a newly added nested `lintropy.yaml` creates a fresh rule context for that subtree and does not inherit the parent workspace rules
+- changes under that root's `.lintropy/` directory merge into that same context
+- saving or otherwise notifying the editor about `lintropy.yaml` / `.lintropy/**/*.yaml` changes triggers a config reload and republishes diagnostics for open files
+
 The VS Code / Cursor client resolves the `lintropy` binary in this order:
 
 1. explicit `lintropy.path`
@@ -103,8 +110,10 @@ lintropy lsp
 
 The server:
 
-- loads config from the workspace root on initialize
-- republishes diagnostics as files change
+- resolves the nearest ancestor `lintropy.yaml` per file instead of using one workspace-wide config
+- treats a nested `lintropy.yaml` as a fresh rule context for that subtree
+- merges `.lintropy/` rule files into the resolved context for that root
+- republishes diagnostics when watched config files change
 - supports quickfix code actions for diagnostics with `fix`
 
 ## Agent workflows

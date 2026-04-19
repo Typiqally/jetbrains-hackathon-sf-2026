@@ -10,15 +10,28 @@
 //! test would dwarf the test itself.
 
 use std::io::{BufRead, BufReader, Read, Write};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
+use tempfile::TempDir;
 
 fn rust_demo() -> PathBuf {
     let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     PathBuf::from(manifest).join("examples/rust-demo")
+}
+
+fn write(path: &Path, contents: &str) {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("create test parent dir");
+    }
+    fs::write(path, contents).expect("write test file");
+}
+
+fn file_uri(path: &Path) -> String {
+    format!("file://{}", path.display())
 }
 
 struct LspProcess {
@@ -522,5 +535,230 @@ fn rule_file_with_broken_query_publishes_inline_diagnostic() {
     assert!(
         line >= 4,
         "diagnostic should land inside the query block: {diags:?}"
+    );
+}
+
+#[test]
+fn watched_nested_lintropy_yaml_replaces_parent_rule_context() {
+    let dir = TempDir::new().expect("create temp dir");
+    write(&dir.path().join("lintropy.yaml"), "version: 1\n");
+    write(
+        &dir.path().join(".lintropy/root-no-unwrap.rule.yaml"),
+        r#"severity: warning
+include: ["**/*.rs"]
+message: "avoid unwrap from root context"
+language: rust
+query: |
+  (call_expression
+    function: (field_expression
+      value: (_) @recv
+      field: (field_identifier) @method)
+    arguments: (arguments)
+    (#eq? @method "unwrap")
+    (#not-has-ancestor? @method "macro_invocation")) @match
+"#,
+    );
+
+    let nested_root = dir.path().join("packages/demo");
+    let main_path = nested_root.join("src/main.rs");
+    write(
+        &main_path,
+        r#"fn main() {
+    let value = Some("demo");
+    let _ = value.unwrap();
+    println!("nested");
+}
+"#,
+    );
+
+    let mut lsp = LspProcess::spawn(dir.path());
+    let root_uri = file_uri(dir.path());
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "processId": null,
+            "rootUri": root_uri,
+            "capabilities": {},
+            "workspaceFolders": [{"uri": root_uri, "name": "root"}]
+        }
+    }));
+    let _ = lsp.recv_until(Duration::from_secs(5), |m| m.get("id") == Some(&json!(1)));
+    lsp.send(&json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}));
+
+    let main_uri = file_uri(&main_path);
+    let main_text = fs::read_to_string(&main_path).expect("read nested main.rs");
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "textDocument/didOpen",
+        "params": {
+            "textDocument": {
+                "uri": main_uri,
+                "languageId": "rust",
+                "version": 1,
+                "text": main_text
+            }
+        }
+    }));
+
+    let initial_publish = lsp.recv_until(Duration::from_secs(10), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(main_uri))
+    });
+    let initial_codes: Vec<&str> = initial_publish
+        .pointer("/params/diagnostics")
+        .and_then(|v| v.as_array())
+        .expect("diagnostics array")
+        .iter()
+        .filter_map(|d| d.pointer("/code").and_then(|c| c.as_str()))
+        .collect();
+    assert!(
+        initial_codes.contains(&"root-no-unwrap"),
+        "expected parent context before nested lintropy.yaml exists, got {initial_codes:?}"
+    );
+
+    write(&nested_root.join("lintropy.yaml"), "version: 1\n");
+    let nested_rule = nested_root.join(".lintropy/nested-no-println.rule.yaml");
+    write(
+        &nested_rule,
+        r#"severity: warning
+include: ["src/**/*.rs"]
+message: "avoid println from nested context"
+language: rust
+query: |
+  (macro_invocation
+    macro: (identifier) @name
+    (#eq? @name "println")) @match
+"#,
+    );
+
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "workspace/didChangeWatchedFiles",
+        "params": {
+            "changes": [
+                {"uri": file_uri(&nested_root.join("lintropy.yaml")), "type": 1},
+                {"uri": file_uri(&nested_rule), "type": 1}
+            ]
+        }
+    }));
+
+    let republish = lsp.recv_until(Duration::from_secs(10), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(main_uri))
+    });
+    let codes: Vec<&str> = republish
+        .pointer("/params/diagnostics")
+        .and_then(|v| v.as_array())
+        .expect("diagnostics array")
+        .iter()
+        .filter_map(|d| d.pointer("/code").and_then(|c| c.as_str()))
+        .collect();
+    assert!(
+        codes.contains(&"nested-no-println"),
+        "expected nested context after nested lintropy.yaml appears, got {codes:?}"
+    );
+    assert!(
+        !codes.contains(&"root-no-unwrap"),
+        "nested context should replace parent rules for child files, got {codes:?}"
+    );
+}
+
+#[test]
+fn watched_lintropy_rule_file_merges_into_existing_context() {
+    let dir = TempDir::new().expect("create temp dir");
+    write(&dir.path().join("lintropy.yaml"), "version: 1\n");
+    let main_path = dir.path().join("src/main.rs");
+    write(
+        &main_path,
+        r#"fn main() {
+    println!("hello");
+}
+"#,
+    );
+
+    let mut lsp = LspProcess::spawn(dir.path());
+    let root_uri = file_uri(dir.path());
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "processId": null,
+            "rootUri": root_uri,
+            "capabilities": {},
+            "workspaceFolders": [{"uri": root_uri, "name": "root"}]
+        }
+    }));
+    let _ = lsp.recv_until(Duration::from_secs(5), |m| m.get("id") == Some(&json!(1)));
+    lsp.send(&json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}));
+
+    let main_uri = file_uri(&main_path);
+    let main_text = fs::read_to_string(&main_path).expect("read root main.rs");
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "textDocument/didOpen",
+        "params": {
+            "textDocument": {
+                "uri": main_uri,
+                "languageId": "rust",
+                "version": 1,
+                "text": main_text
+            }
+        }
+    }));
+
+    let initial_publish = lsp.recv_until(Duration::from_secs(10), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(main_uri))
+    });
+    let initial_diags = initial_publish
+        .pointer("/params/diagnostics")
+        .and_then(|v| v.as_array())
+        .expect("diagnostics array");
+    assert!(
+        initial_diags.is_empty(),
+        "expected no diagnostics before adding rules, got {initial_diags:?}"
+    );
+
+    let rule_path = dir.path().join(".lintropy/no-println.rule.yaml");
+    write(
+        &rule_path,
+        r#"severity: warning
+include: ["src/**/*.rs"]
+message: "avoid println after live rule merge"
+language: rust
+query: |
+  (macro_invocation
+    macro: (identifier) @name
+    (#eq? @name "println")) @match
+"#,
+    );
+
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "workspace/didChangeWatchedFiles",
+        "params": {
+            "changes": [
+                {"uri": file_uri(&rule_path), "type": 1}
+            ]
+        }
+    }));
+
+    let republish = lsp.recv_until(Duration::from_secs(10), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(main_uri))
+    });
+    let codes: Vec<&str> = republish
+        .pointer("/params/diagnostics")
+        .and_then(|v| v.as_array())
+        .expect("diagnostics array")
+        .iter()
+        .filter_map(|d| d.pointer("/code").and_then(|c| c.as_str()))
+        .collect();
+    assert!(
+        codes.contains(&"no-println"),
+        "expected live merged rule to republish diagnostics, got {codes:?}"
     );
 }

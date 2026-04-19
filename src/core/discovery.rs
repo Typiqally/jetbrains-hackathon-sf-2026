@@ -33,8 +33,7 @@ pub struct Discovered {
 /// filesystem root is hit. Returns [`LintropyError::ConfigLoad`] if no root
 /// config is found.
 pub fn discover_from(start: &Path) -> Result<Discovered> {
-    let start = canonicalize_best_effort(start);
-    let root_config = walk_up_for_root(&start)?;
+    let root_config = find_root_config(start)?;
     let root_dir = root_config
         .parent()
         .ok_or_else(|| LintropyError::ConfigLoad("root config has no parent dir".into()))?
@@ -45,6 +44,12 @@ pub fn discover_from(start: &Path) -> Result<Discovered> {
         root_dir,
         rule_files,
     })
+}
+
+/// Resolve the nearest `lintropy.yaml` by walking up from `start`.
+pub fn find_root_config(start: &Path) -> Result<PathBuf> {
+    let start = canonicalize_best_effort(start);
+    walk_up_for_root(&start)
 }
 
 /// Enumerate `.lintropy/**/*.{rule,rules}.yaml` under `root_dir`.
