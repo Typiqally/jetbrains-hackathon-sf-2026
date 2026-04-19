@@ -212,10 +212,7 @@ fn run_claude_install(
         .arg(scope.as_str())
         .status()
         .map_err(|err| {
-            CliError::internal(format!(
-                "failed to launch `{}`: {err}",
-                claude.display()
-            ))
+            CliError::internal(format!("failed to launch `{}`: {err}", claude.display()))
         })?;
     if !status.success() {
         return Err(CliError::user(format!(

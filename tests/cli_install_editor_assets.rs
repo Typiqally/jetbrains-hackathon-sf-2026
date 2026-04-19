@@ -194,7 +194,10 @@ fn marketplace_manifest_points_at_claude_code_plugin() {
     let source = entry["source"].as_str().unwrap();
     let plugin_root = repo_root.join(source.trim_start_matches("./"));
     assert!(
-        plugin_root.join(".claude-plugin").join("plugin.json").is_file(),
+        plugin_root
+            .join(".claude-plugin")
+            .join("plugin.json")
+            .is_file(),
         "marketplace source {source} does not contain .claude-plugin/plugin.json"
     );
 }
