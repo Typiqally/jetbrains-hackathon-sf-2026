@@ -28,6 +28,7 @@ pub fn run(args: InstallArgs) -> Result<u8, CliError> {
                 force: args.force,
                 scope: args.scope,
                 no_install: args.no_install,
+                with_skill: args.with_skill,
             })
         }
     }

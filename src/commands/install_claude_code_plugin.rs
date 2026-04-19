@@ -28,6 +28,7 @@ use serde_json::{json, Value};
 use crate::cli::PluginScope;
 use crate::commands::current_dir;
 use crate::exit::{CliError, EXIT_OK};
+use crate::skill::{report_skill, write_skill};
 
 pub const PLUGIN_DIR_NAME: &str = "lintropy-claude-code-plugin";
 pub const PLUGIN_NAME: &str = "lintropy-lsp";
@@ -39,6 +40,7 @@ pub(crate) struct ClaudeCodeInstall {
     pub force: bool,
     pub scope: PluginScope,
     pub no_install: bool,
+    pub with_skill: bool,
 }
 
 pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
@@ -50,6 +52,10 @@ pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
     write_plugin(&target, &manifest)?;
 
     println!("extracted {}", target.display());
+
+    if args.with_skill {
+        install_skill_for_scope(args.scope)?;
+    }
 
     if args.no_install {
         println!();
@@ -74,6 +80,40 @@ pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
         );
     }
     Ok(EXIT_OK)
+}
+
+fn install_skill_for_scope(scope: PluginScope) -> Result<(), CliError> {
+    let root = match scope {
+        PluginScope::Project => current_dir()?,
+        PluginScope::User => home_dir()?,
+    };
+    let target = root
+        .join(".claude")
+        .join("skills")
+        .join("lintropy")
+        .join("SKILL.md");
+    let outcome = write_skill(&target)?;
+    report_skill(&target, outcome);
+    Ok(())
+}
+
+fn home_dir() -> Result<PathBuf, CliError> {
+    if let Some(home) = std::env::var_os("HOME") {
+        if !home.is_empty() {
+            return Ok(PathBuf::from(home));
+        }
+    }
+    #[cfg(windows)]
+    {
+        if let Some(profile) = std::env::var_os("USERPROFILE") {
+            if !profile.is_empty() {
+                return Ok(PathBuf::from(profile));
+            }
+        }
+    }
+    Err(CliError::user(
+        "could not resolve home directory — pass `--scope project` or set HOME explicitly",
+    ))
 }
 
 fn resolve_target(args: &ClaudeCodeInstall) -> Result<PathBuf, CliError> {

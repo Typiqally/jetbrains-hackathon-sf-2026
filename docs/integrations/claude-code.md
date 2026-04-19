@@ -39,6 +39,7 @@ Generates the plugin manifest fresh (version synced to the installed `lintropy`,
 - `--scope project` (default) — team-shared, recorded in `.claude/settings.json`.
 - `--scope user` — personal-only install.
 - `--no-install` — write the plugin directory but do not shell out; prints the `claude plugin install` command for you to run.
+- `--with-skill` — also materialise `SKILL.md` into `.claude/skills/lintropy/` (project scope) or `$HOME/.claude/skills/lintropy/` (user scope).
 - `--dir <PATH>` — write the plugin directory somewhere other than the cwd.
 - `--force` — overwrite an existing plugin directory.
 

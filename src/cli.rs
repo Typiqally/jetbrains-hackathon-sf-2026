@@ -316,6 +316,12 @@ pub struct InstallArgs {
     #[arg(long = "no-install")]
     pub no_install: bool,
 
+    /// Claude Code: also materialise the lintropy `SKILL.md` into the
+    /// agent skill directory matching `--scope` (`./.claude/skills/lintropy/`
+    /// for project, `$HOME/.claude/skills/lintropy/` for user).
+    #[arg(long = "with-skill")]
+    pub with_skill: bool,
+
     /// VS Code / Cursor: build the `.vsix` but do not install it.
     #[arg(long = "package-only")]
     pub package_only: bool,
