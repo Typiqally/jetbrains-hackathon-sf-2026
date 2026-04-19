@@ -2,8 +2,9 @@
 /target/
 **/*.rs.bk
 
-# MkDocs build output
-/site/
+# Website (Vite) build output
+/website/dist/
+/website/node_modules/
 
 # Worktrees
 .worktrees/

@@ -1,0 +1,225 @@
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.css";
+
+@theme {
+  --color-bg: #080808;
+  --color-surface: #0e0e0e;
+  --color-surface-2: #141414;
+  --color-fg: #f3f1eb;
+  --color-fg-muted: #c7c1b9;
+  --color-fg-subtle: #a5a099;
+  --color-fg-faint: #7c7974;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-accent: #8de1b4;
+  --color-accent-hover: #a6eec4;
+  --color-accent-ink: #062217;
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-serif: "Georgia", "Times New Roman", serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(141, 225, 180, 0.25);
+  color: var(--color-fg);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* highlight.js background override (use surface bg to match frame) */
+.hljs {
+  background: transparent !important;
+  color: #ece8df;
+  padding: 0 !important;
+}
+
+/* Prose — styles for rendered markdown */
+.prose {
+  color: var(--color-fg);
+  max-width: 46rem;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-fg);
+  scroll-margin-top: 5rem;
+}
+
+.prose h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  line-height: 1.02;
+  margin: 0 0 1rem;
+}
+
+.prose h2 {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  line-height: 1.1;
+  margin: 2.6rem 0 0.8rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.prose > h2:first-child,
+.prose h1 + h2 {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 1.4rem;
+}
+
+.prose h3 {
+  font-size: 1.08rem;
+  margin: 1.8rem 0 0.6rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.prose h4 {
+  font-size: 0.95rem;
+  margin: 1.4rem 0 0.5rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  margin: 0.75rem 0;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.3rem;
+}
+
+.prose ul li::marker {
+  color: var(--color-fg-faint);
+}
+
+.prose li + li {
+  margin-top: 0.25rem;
+}
+
+.prose a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(141, 225, 180, 0.28);
+  transition: border-color 120ms ease;
+}
+.prose a:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+.prose code {
+  padding: 0.08rem 0.35rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ece8df;
+  font-size: 0.86em;
+  font-family: var(--font-mono);
+}
+
+.prose a code {
+  color: inherit;
+}
+
+.prose pre {
+  margin: 1rem 0;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0.9rem 1.1rem;
+  overflow: auto;
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.prose pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+.prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  margin: 2rem 0;
+}
+
+.prose blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 1rem;
+  color: var(--color-fg-muted);
+  font-style: italic;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 0.86rem;
+  margin: 1rem 0;
+}
+
+.prose th,
+.prose td {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.prose tr:last-child td {
+  border-bottom: none;
+}
+
+.prose strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
