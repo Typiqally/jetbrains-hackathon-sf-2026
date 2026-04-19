@@ -1,0 +1,28 @@
+{
+  "description": "Registers `lintropy lsp` as a Language Server so Claude Code sees lintropy diagnostics live while editing.",
+  "homepage": "https://github.com/Typiqally/lintropy",
+  "license": "MIT",
+  "lspServers": {
+    "lintropy": {
+      "args": [
+        "lsp"
+      ],
+      "command": "lintropy",
+      "extensionToLanguage": {
+        ".cts": "typescript",
+        ".go": "go",
+        ".mts": "typescript",
+        ".py": "python",
+        ".pyi": "python",
+        ".rs": "rust",
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".yaml": "yaml",
+        ".yml": "yaml"
+      }
+    }
+  },
+  "name": "lintropy-lsp",
+  "repository": "https://github.com/Typiqally/lintropy",
+  "version": "0.1.0"
+}

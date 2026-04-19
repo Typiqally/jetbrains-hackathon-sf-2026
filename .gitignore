@@ -20,6 +20,9 @@
 # Cursor / local history
 .history/
 
+# Claude Code local state
+.claude/
+
 # macOS
 .DS_Store
 

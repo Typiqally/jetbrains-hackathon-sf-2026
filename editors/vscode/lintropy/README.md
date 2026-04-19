@@ -9,7 +9,7 @@ files — all delivered over LSP by a single extension.
 One command (via the `lintropy` CLI):
 
 ```console
-lintropy install-editor vscode        # or: cursor
+lintropy lsp install vscode        # or: cursor
 ```
 
 From a source checkout, that command runs the local extension build,

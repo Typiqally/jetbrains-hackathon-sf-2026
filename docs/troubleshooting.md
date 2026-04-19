@@ -53,19 +53,16 @@ Those fields exist in the config shape, but match-rule execution is not enabled 
 
 ## Query highlighting is missing in my editor
 
-For VS Code or Cursor:
+Query highlighting ships inside the main LSP extension. If it is missing, the
+LSP integration itself is not running. Install or reinstall it:
 
 ```console
-lintropy install-query-extension vscode
+lintropy lsp install vscode       # or: cursor, jetbrains
 ```
 
-For JetBrains:
-
-```console
-lintropy install-textmate-bundle
-```
-
-Then import the extracted bundle in the IDE.
+JetBrains note: semantic tokens for the `query: |` DSL are not painted inside
+JetBrains IDEs (LSP4IJ discards them for composite PSI elements). Diagnostics
+and inline rule-file linting still work. See [`editors/jetbrains/README.md`](../editors/jetbrains/README.md).
 
 ## Live diagnostics are missing in my editor
 

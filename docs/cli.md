@@ -160,39 +160,27 @@ Normally you do not run this directly in a terminal. Your editor starts it for y
 
 ## Editor install commands
 
-Query highlighting for VS Code or Cursor:
+One subcommand covers every target:
 
 ```console
-lintropy install-query-extension vscode
-lintropy install-query-extension cursor
-lintropy install-query-extension --package-only -o ./lintropy-query.vsix
+lintropy lsp install vscode                          # VS Code
+lintropy lsp install cursor --profile Default        # Cursor, named profile
+lintropy lsp install vscode --package-only -o out.vsix  # just build the .vsix
+lintropy lsp install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
+lintropy lsp install claude-code                     # Claude Code plugin, auto-installs
+lintropy lsp install claude-code --no-install        # write the plugin, print the install command
+lintropy lsp install claude-code --scope user        # user-scoped install
 ```
 
-TextMate bundle for JetBrains query highlighting:
+For VS Code / Cursor this builds the checked-out extension source with
+`pnpm`, packages a local `.vsix`, and either installs it into the editor
+or writes it to disk. For JetBrains it unpacks the LSP4IJ custom template
+for a one-time IDE import. For Claude Code it generates the plugin
+manifest fresh (version + feature-gated extension map + absolute binary
+path) and shells out to `claude plugin install`.
 
-```console
-lintropy install-textmate-bundle
-lintropy install-textmate-bundle ./tmp
-lintropy install-textmate-bundle --force
-```
-
-LSP extension for VS Code or Cursor:
-
-```console
-lintropy install-lsp-extension vscode
-lintropy install-lsp-extension cursor --profile Default
-lintropy install-lsp-extension --package-only -o ./lintropy.vsix
-```
-
-This builds the checked-out extension source with `pnpm`, packages a local
-`.vsix`, and then either installs it into the editor or writes it to disk.
-
-JetBrains LSP4IJ template:
-
-```console
-lintropy install-lsp-template jetbrains
-lintropy install-lsp-template jetbrains ./tmp
-```
+See [`docs/editor-and-agent-setup.md`](editor-and-agent-setup.md) for the
+full walkthrough including the Claude Code marketplace flow.
 
 ## Suggested daily workflow
 

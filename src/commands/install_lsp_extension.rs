@@ -1,4 +1,4 @@
-//! `lintropy install-lsp-extension vscode|cursor` — build the VS Code /
+//! Back-end for `lintropy lsp install vscode|cursor` — build the VS Code /
 //! Cursor extension from the local checkout, package it into a `.vsix`,
 //! and hand that artifact to the editor's `--install-extension` flag.
 //!
@@ -9,10 +9,24 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::cli::{InstallLspExtensionArgs, LspExtensionEditor};
 use crate::exit::{CliError, EXIT_OK};
 
-pub fn run(args: InstallLspExtensionArgs) -> Result<u8, CliError> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum VsixEditor {
+    Vscode,
+    Cursor,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct VsixBuild {
+    /// `None` means `--package-only` (no editor install).
+    pub editor: Option<VsixEditor>,
+    pub profile: Option<String>,
+    pub package_only: bool,
+    pub output: Option<PathBuf>,
+}
+
+pub(crate) fn run(args: VsixBuild) -> Result<u8, CliError> {
     let extension_dir = extension_source_dir()?;
     ensure_tool("pnpm")?;
 
@@ -41,8 +55,8 @@ pub fn run(args: InstallLspExtensionArgs) -> Result<u8, CliError> {
         .editor
         .ok_or_else(|| CliError::user("editor is required (vscode or cursor)"))?;
     let cli_bin = match editor {
-        LspExtensionEditor::Vscode => "code",
-        LspExtensionEditor::Cursor => "cursor",
+        VsixEditor::Vscode => "code",
+        VsixEditor::Cursor => "cursor",
     };
     ensure_tool(cli_bin)?;
 

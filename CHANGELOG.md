@@ -132,6 +132,23 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
 
 ### Changed
 
+- **Unified install command.** Every editor install is now a subcommand of
+  `lsp`: `lintropy lsp install vscode|cursor|jetbrains|claude-code`. The
+  old `install-editor`, `install-lsp-extension`, `install-lsp-template`,
+  and `install-claude-code-plugin` commands are removed. VS Code / Cursor
+  flags (`--package-only`, `-o`, `--profile`), JetBrains flags (`--dir`,
+  `--force`), and Claude Code flags (`--scope`, `--no-install`) now live
+  on the one subcommand.
+- **Claude Code integration.**
+  - New `.claude-plugin/marketplace.json` at the repo root lets users run
+    `/plugin marketplace add Typiqally/lintropy` then `/plugin install
+    lintropy-lsp@lintropy` without any local CLI.
+  - `lintropy lsp install claude-code` generates the plugin manifest
+    freshly — version pinned to `CARGO_PKG_VERSION`, `extensionToLanguage`
+    feature-gated, `command` resolved to an absolute `lintropy` binary
+    path — and shells out to `claude plugin install <dir> --scope
+    <scope>` when the `claude` CLI is on `PATH`. `--no-install` skips the
+    shell-out.
 - **Internal API.** `Language::ts_language` now takes a `&Path` argument
   so TypeScript can dispatch between the `typescript` and `tsx`
   grammars. Other languages ignore it. Not a published SDK surface.

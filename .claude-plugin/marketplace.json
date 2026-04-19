@@ -1,0 +1,27 @@
+{
+  "name": "lintropy",
+  "owner": {
+    "name": "rns70 & Typiqally",
+    "email": "12190745+Typiqally@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Lintropy's Claude Code integrations.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "lintropy-lsp",
+      "source": "./editors/claude-code",
+      "description": "Registers `lintropy lsp` as a Language Server so Claude Code sees lintropy diagnostics live while editing.",
+      "version": "0.1.0",
+      "homepage": "https://github.com/Typiqally/lintropy",
+      "repository": "https://github.com/Typiqally/lintropy",
+      "license": "MIT",
+      "keywords": [
+        "lsp",
+        "linter",
+        "tree-sitter"
+      ]
+    }
+  ]
+}

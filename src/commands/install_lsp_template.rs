@@ -1,4 +1,4 @@
-//! `lintropy install-lsp-template jetbrains` — unpack the embedded
+//! Back-end for `lintropy lsp install jetbrains` — unpack the embedded
 //! LSP4IJ custom template into a user-chosen directory so JetBrains
 //! IDEs can import it via **LSP Console → `+` → Template → Import
 //! from directory**.
@@ -9,28 +9,21 @@
 //! the shipped binary.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use crate::cli::{InstallLspTemplateArgs, LspTemplateEditor};
 use crate::commands::current_dir;
 use crate::editor_assets::{LSP4IJ_TEMPLATE_DIR, LSP4IJ_TEMPLATE_DIR_NAME};
 use crate::exit::{CliError, EXIT_OK};
 
-pub fn run(args: InstallLspTemplateArgs) -> Result<u8, CliError> {
-    match args.editor {
-        LspTemplateEditor::Jetbrains => install_jetbrains(args),
-    }
-}
-
-fn install_jetbrains(args: InstallLspTemplateArgs) -> Result<u8, CliError> {
-    let parent = match args.dir {
+pub(crate) fn install_jetbrains(dir: Option<PathBuf>, force: bool) -> Result<u8, CliError> {
+    let parent = match dir {
         Some(p) => p,
         None => current_dir()?,
     };
     let target = parent.join(LSP4IJ_TEMPLATE_DIR_NAME);
 
     if target.exists() {
-        if args.force {
+        if force {
             fs::remove_dir_all(&target)?;
         } else {
             return Err(CliError::user(format!(

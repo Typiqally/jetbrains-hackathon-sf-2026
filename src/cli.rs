@@ -37,16 +37,7 @@ pub enum Command {
     /// Parse a source file with tree-sitter and print the S-expression.
     #[command(name = "ts-parse")]
     TsParse(TsParseArgs),
-    /// Install everything lintropy ships for an editor (one command).
-    #[command(name = "install-editor")]
-    InstallEditor(InstallEditorArgs),
-    /// Install the lintropy LSP extension into VS Code / Cursor.
-    #[command(name = "install-lsp-extension")]
-    InstallLspExtension(InstallLspExtensionArgs),
-    /// Unpack the embedded LSP4IJ template (JetBrains LSP client).
-    #[command(name = "install-lsp-template")]
-    InstallLspTemplate(InstallLspTemplateArgs),
-    /// Run the Language Server Protocol backend over stdio.
+    /// Run the Language Server Protocol backend, or install its editor bindings.
     Lsp(LspArgs),
 }
 
@@ -188,6 +179,15 @@ pub struct LspArgs {
     /// Accept VS Code-style transport hints; stdio is the only mode today.
     #[arg(long, hide = true)]
     pub stdio: bool,
+
+    #[command(subcommand)]
+    pub subcommand: Option<LspSubcommand>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum LspSubcommand {
+    /// Install the lintropy LSP integration for the given editor or agent.
+    Install(InstallArgs),
 }
 
 #[derive(Debug, Args)]
@@ -257,75 +257,45 @@ pub struct TsParseArgs {
     pub lang: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum PluginScope {
+    /// Shared via `.claude/settings.json` in the project. Default.
+    #[default]
+    Project,
+    /// Personal-only install in the user's global Claude Code settings.
+    User,
+}
+
+impl PluginScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PluginScope::Project => "project",
+            PluginScope::User => "user",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub enum LspExtensionEditor {
-    /// Install into VS Code via the `code` CLI.
+pub enum InstallTarget {
+    /// VS Code — builds the local extension and runs `code --install-extension`.
     Vscode,
-    /// Install into Cursor via the `cursor` CLI.
+    /// Cursor — same extension as VS Code, installed via the `cursor` CLI.
     Cursor,
-}
-
-#[derive(Debug, Args)]
-pub struct InstallLspExtensionArgs {
-    /// Target editor. Required unless `--package-only` is set.
-    #[arg(value_enum)]
-    pub editor: Option<LspExtensionEditor>,
-
-    /// Install into a named editor profile.
-    #[arg(long, value_name = "NAME")]
-    pub profile: Option<String>,
-
-    /// Build the `.vsix` from the checked-out extension source and write it
-    /// to disk instead of invoking the editor.
-    #[arg(long = "package-only")]
-    pub package_only: bool,
-
-    /// Output path for `--package-only`. Defaults to `./lintropy.vsix`.
-    #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
-    pub output: Option<PathBuf>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub enum LspTemplateEditor {
-    /// LSP4IJ custom template (JetBrains IDEs).
+    /// JetBrains IDEs — unpacks the LSP4IJ custom template for one-time import.
     Jetbrains,
+    /// Claude Code — writes the plugin manifest and calls `claude plugin install`.
+    #[value(name = "claude-code")]
+    ClaudeCode,
 }
 
 #[derive(Debug, Args)]
-pub struct InstallLspTemplateArgs {
-    /// Target editor family.
+pub struct InstallArgs {
+    /// Target editor or agent.
     #[arg(value_enum)]
-    pub editor: LspTemplateEditor,
+    pub target: InstallTarget,
 
-    /// Directory to unpack the template into. Defaults to the current
-    /// working directory; the template dir is created beneath it.
-    #[arg(long, value_name = "PATH")]
-    pub dir: Option<PathBuf>,
-
-    /// Overwrite an existing template dir in place.
-    #[arg(long)]
-    pub force: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub enum EditorFamily {
-    /// VS Code — installs the extension (grammar + LSP client).
-    Vscode,
-    /// Cursor — installs the same extension as VS Code.
-    Cursor,
-    /// JetBrains IDEs — unpacks the TextMate bundle + LSP4IJ template.
-    Jetbrains,
-}
-
-#[derive(Debug, Args)]
-pub struct InstallEditorArgs {
-    /// Target editor family.
-    #[arg(value_enum)]
-    pub editor: EditorFamily,
-
-    /// For JetBrains, parent directory where the bundle + template get
-    /// unpacked. Ignored for VS Code / Cursor (the editor CLI owns the
-    /// install location). Defaults to the current working directory.
+    /// Parent directory for the materialised assets (JetBrains / Claude Code).
+    /// Defaults to the current working directory.
     #[arg(long, value_name = "PATH")]
     pub dir: Option<PathBuf>,
 
@@ -333,7 +303,25 @@ pub struct InstallEditorArgs {
     #[arg(long, value_name = "NAME")]
     pub profile: Option<String>,
 
-    /// Overwrite existing JetBrains bundle / template dirs in place.
+    /// Overwrite existing output directories in place.
     #[arg(long)]
     pub force: bool,
+
+    /// Claude Code plugin scope passed to `claude plugin install`.
+    #[arg(long, value_enum, default_value_t = PluginScope::Project)]
+    pub scope: PluginScope,
+
+    /// Claude Code: write the plugin directory but do not shell out to
+    /// `claude plugin install`. Prints the command instead.
+    #[arg(long = "no-install")]
+    pub no_install: bool,
+
+    /// VS Code / Cursor: build the `.vsix` but do not install it.
+    #[arg(long = "package-only")]
+    pub package_only: bool,
+
+    /// VS Code / Cursor: output path for `--package-only`.
+    /// Defaults to `./lintropy.vsix`.
+    #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
+    pub output: Option<PathBuf>,
 }
