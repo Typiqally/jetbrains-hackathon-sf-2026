@@ -203,122 +203,82 @@ The canonical `SKILL.md` at
 [`skill/SKILL.md`](skill/SKILL.md)
 is what `init --with-skill` installs into agent skill directories.
 
-## Editor support
+## Editor and agent support
 
-This repo checks in JSON Schemas for all lintropy YAML surfaces:
-
-- `editors/schemas/lintropy.schema.json` for repo-root `lintropy.yaml`
-- `editors/schemas/lintropy-rule.schema.json` for `.lintropy/**/*.rule.yaml`
-- `editors/schemas/lintropy-rules.schema.json` for `.lintropy/**/*.rules.yaml`
-
-Refresh them after schema changes with:
+Lintropy ships one LSP server (`lintropy lsp`) and one install command that wires it into every supported target:
 
 ```console
-./scripts/export-editor-schemas.sh
+lintropy install vscode        # VS Code
+lintropy install cursor        # Cursor
+lintropy install jetbrains     # JetBrains IDEs (LSP4IJ template)
+lintropy install claude-code   # Claude Code plugin + skill
 ```
 
-### One command, any editor
+Each target gives you live diagnostics, quickfixes, config reload, and semantic-token highlighting for the `query: |` DSL. No separate "query syntax" extension. Per-integration walkthroughs live under [`docs/integrations/`](docs/integrations/index.md).
+
+### VS Code and Cursor
 
 ```console
-lintropy install-editor vscode       # or: cursor
-lintropy install-editor jetbrains --dir ~/.lintropy
+lintropy install vscode        # or: cursor
+lintropy install cursor --profile Default
 ```
 
-For VS Code / Cursor this installs a single extension: an LSP client that
-delivers diagnostics, quickfixes, config-reload, **and** semantic-token
-highlighting for the `query:` DSL — all over LSP, no separate grammar
-extension.
+Builds the bundled extension source into a `.vsix` and installs it via `code --install-extension` / `cursor --install-extension`. The extension resolves the `lintropy` binary in this order: explicit `lintropy.path` setting → `PATH` → extension-managed download from the matching GitHub release.
 
-For JetBrains this unpacks the LSP4IJ template, which delivers
-diagnostics and inline rule-file linting. The `query: |` DSL keeps the
-YAML plugin's native colouring — LSP-side semantic tokens render in VS
-Code / Cursor / Neovim / Helix / Zed but are discarded by LSP4IJ's
-PSI-leaf filter; see [JetBrains IDEs](#jetbrains-ides) for details.
-Still needs one IDE-side import step.
-
-The rest of this section covers the per-editor details, JSON schema mappings
-for editor-side YAML completion, and the underlying building-block commands.
-
-### VS Code / Cursor
-
-Workspace settings in `.vscode/settings.json` associate those schemas with the
-matching files, and `.vscode/extensions.json` recommends `redhat.vscode-yaml`.
-Cursor uses the same workspace settings, so completions, hover docs, and
-validation work there as well.
-
-#### Extension install
+Package the `.vsix` without installing (useful for CI):
 
 ```console
-lintropy install-editor vscode       # or: cursor
+lintropy install vscode --package-only -o ./lintropy.vsix
 ```
 
-Under the hood this calls `lintropy install-lsp-extension vscode`, which
-builds the local extension source into a `.vsix` and hands it to
-`code --install-extension`. The extension registers `.rs` files plus
-`lintropy.yaml` / `.lintropy/**/*.yaml` as LSP documents; live diagnostics
-flow for the Rust files and semantic-token highlighting flows for the
-`query: |` DSL inside the YAML rule files. No separate "query syntax"
-extension to install.
+Config resolution is per file rather than one workspace-wide root: each source file uses the nearest ancestor `lintropy.yaml`. A newly added nested `lintropy.yaml` creates a fresh rule context for that subtree, while `.lintropy/` changes merge into the rules for the already-resolved root and republish diagnostics for open files.
 
-Config resolution is per file rather than one workspace-wide root: each
-Rust file uses the nearest ancestor `lintropy.yaml`. A newly added nested
-`lintropy.yaml` creates a fresh rule context for that subtree, while
-`.lintropy/` changes merge into the rules for the already-resolved root and
-republish diagnostics for open files.
-
-Once installed, the extension resolves the `lintropy` binary in this order:
-explicit `lintropy.path` setting → PATH lookup → automatic download from
-the matching GitHub release into the extension's global storage (controlled
-by `lintropy.binarySource`). So `install-editor vscode` followed by opening
-a Rust file is sufficient even on a machine where `lintropy` is not on PATH.
-
-Other settings: `lintropy.enable`, `lintropy.trace.server`, `lintropy.binarySource`
-(see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
-
-Contributors can still build + install the local `.vsix` manually:
-
-```console
-cd editors/vscode/lintropy
-npm install && npm run compile
-npx vsce package -o lintropy.vsix
-code --install-extension lintropy.vsix
-```
+See [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md) for per-setting reference.
 
 ### JetBrains IDEs
 
-Shared mappings live in `.idea/jsonSchemas.xml`, pointing JetBrains IDEs at the
-same checked-in schema files for:
-
-- `lintropy.yaml`
-- `.lintropy/**/*.rule.yaml`
-- `.lintropy/**/*.rules.yaml`
-
-If your IDE ignores shared `.idea` files, add the same three mappings manually
-under `Languages & Frameworks | Schemas and DTDs | JSON Schema Mappings`.
-
-#### LSP4IJ install
-
 ```console
-lintropy install-editor jetbrains --dir ~/.lintropy
+lintropy install jetbrains --dir ~/.lintropy
 ```
 
-This unpacks the LSP4IJ custom server template to `--dir/lsp4ij-template/`.
-Still needs one import step in the IDE (JetBrains has no equivalent of
-`code --install-extension`).
+Unpacks the [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) custom server template to `~/.lintropy/lsp4ij-template`. One import step in the IDE:
 
-##### LSP4IJ server import
+`View → Tool Windows → LSP Console → + → New Language Server → Template → Import from directory…`
 
-JetBrains IDEs plug into `lintropy lsp` through the
-[LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) community plugin.
-Works on all JetBrains IDEs including free Community editions.
+Pick the extracted directory. All fields are pre-filled. Full walkthrough including manual-setup fallback: [`editors/jetbrains/README.md`](editors/jetbrains/README.md).
 
-After `install-editor jetbrains --dir ~/.lintropy`, in your IDE:
-`View → Tool Windows → LSP Console → + → New Language Server → Template →
-Import from directory...` and pick `~/.lintropy/lsp4ij-template`. All
-fields (name, command, `*.rs → rust` mapping) are pre-filled.
+### Claude Code
 
-Full walkthrough including manual-setup fallback and troubleshooting:
-[`editors/jetbrains/README.md`](editors/jetbrains/README.md).
+Two paths, pick whichever matches your setup.
+
+**Marketplace (recommended).** Inside Claude Code:
+
+```text
+/plugin marketplace add Typiqally/lintropy
+/plugin install lintropy-lsp@lintropy
+```
+
+The marketplace manifest lives at the repo root so this works from any clean Claude Code install — no `lintropy` CLI required. For a local checkout: `/plugin marketplace add /absolute/path/to/lintropy`.
+
+**CLI.** When you want the plugin manifest to pin the absolute path of your local `lintropy` binary:
+
+```console
+lintropy install claude-code                    # --scope project by default
+lintropy install claude-code --scope user       # personal-only
+lintropy install claude-code --no-install       # print the claude plugin install command instead
+```
+
+The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it to the cwd alongside the lintropy skill at `.claude/skills/lintropy/SKILL.md`, and shells out to `claude plugin install` when the `claude` CLI is on `PATH`.
+
+### JSON Schemas
+
+This repo checks in JSON Schemas for every lintropy YAML surface:
+
+- `editors/schemas/lintropy.schema.json` — repo-root `lintropy.yaml`
+- `editors/schemas/lintropy-rule.schema.json` — `.lintropy/**/*.rule.yaml`
+- `editors/schemas/lintropy-rules.schema.json` — `.lintropy/**/*.rules.yaml`
+
+Workspace settings in `.vscode/settings.json` and `.idea/jsonSchemas.xml` wire them into VS Code / Cursor and JetBrains IDEs respectively. Refresh after schema changes with `./scripts/export-editor-schemas.sh`.
 
 ## Status
 

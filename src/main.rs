@@ -37,10 +37,8 @@ fn dispatch(cli: Cli) -> Result<u8, CliError> {
         Some(Command::Schema(args)) => commands::schema::run(args),
         Some(Command::Config(args)) => commands::validate::run(args),
         Some(Command::TsParse(args)) => commands::ts_parse::run(args),
-        Some(Command::InstallEditor(args)) => commands::install_editor::run(args),
-        Some(Command::InstallLspExtension(args)) => commands::install_lsp_extension::run(args),
-        Some(Command::InstallLspTemplate(args)) => commands::install_lsp_template::run(args),
         Some(Command::Lsp(_args)) => lintropy::lsp::run(),
+        Some(Command::Install(args)) => commands::install::run(args),
         None => commands::check::run(cli::CheckArgs::default()),
     }
 }

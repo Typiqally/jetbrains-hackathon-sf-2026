@@ -1,4 +1,4 @@
-//! Integration tests for the `install-*` subcommand family.
+//! Integration tests for the `install` subcommand.
 
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -9,11 +9,11 @@ use std::path::Path;
 use std::os::unix::fs::PermissionsExt;
 
 #[test]
-fn install_lsp_template_jetbrains_extracts_template_files() {
+fn install_jetbrains_extracts_template_files() {
     let dir = tempfile::tempdir().unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("install-lsp-template")
+        .arg("install")
         .arg("jetbrains")
         .arg("--dir")
         .arg(dir.path())
@@ -40,12 +40,12 @@ fn install_lsp_template_jetbrains_extracts_template_files() {
 }
 
 #[test]
-fn install_lsp_template_refuses_existing_dir_without_force() {
+fn install_jetbrains_refuses_existing_dir_without_force() {
     let dir = tempfile::tempdir().unwrap();
     fs::create_dir_all(dir.path().join("lsp4ij-template")).unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("install-lsp-template")
+        .arg("install")
         .arg("jetbrains")
         .arg("--dir")
         .arg(dir.path())
@@ -55,7 +55,150 @@ fn install_lsp_template_refuses_existing_dir_without_force() {
 }
 
 #[test]
-fn install_lsp_extension_package_only_builds_vsix_from_source() {
+fn install_claude_code_writes_manifest() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin_dir = dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("claude-code")
+        .arg("--dir")
+        .arg(dir.path())
+        .arg("--no-install")
+        .env("PATH", &bin_dir)
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("extracted"))
+        .stdout(predicate::str::contains("claude plugin install"));
+
+    let manifest = dir
+        .path()
+        .join("lintropy-claude-code-plugin")
+        .join(".claude-plugin")
+        .join("plugin.json");
+    assert!(manifest.is_file());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&manifest).unwrap()).unwrap();
+    assert_eq!(parsed["name"], "lintropy-lsp");
+    assert_eq!(parsed["version"], env!("CARGO_PKG_VERSION"));
+    let server = &parsed["lspServers"]["lintropy"];
+    let command = server["command"].as_str().unwrap();
+    assert!(
+        command.ends_with("lintropy") || command.ends_with("lintropy.exe"),
+        "command should point at the lintropy binary: {command}"
+    );
+    assert_eq!(server["args"][0], "lsp");
+    let ext_map = server["extensionToLanguage"].as_object().unwrap();
+    assert_eq!(ext_map.get(".rs").and_then(|v| v.as_str()), Some("rust"));
+    assert_eq!(ext_map.get(".yaml").and_then(|v| v.as_str()), Some("yaml"));
+}
+
+#[test]
+fn install_claude_code_shells_out_when_claude_on_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin_dir = dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let log = dir.path().join("claude.log");
+    write_executable(
+        &bin_dir.join("claude"),
+        r#"#!/bin/sh
+echo "$@" >> "$LINTROPY_CLAUDE_LOG"
+exit 0
+"#,
+    );
+
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("claude-code")
+        .arg("--dir")
+        .arg(dir.path())
+        .arg("--scope")
+        .arg("user")
+        .env("PATH", &bin_dir)
+        .env("LINTROPY_CLAUDE_LOG", &log)
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("running:"));
+
+    let invocation = fs::read_to_string(&log).unwrap();
+    assert!(invocation.contains("plugin install"));
+    assert!(invocation.contains("--scope user"));
+    assert!(invocation.contains("lintropy-claude-code-plugin"));
+}
+
+#[test]
+fn committed_claude_code_plugin_matches_generated_manifest() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let committed_path = repo_root
+        .join("editors")
+        .join("claude-code")
+        .join(".claude-plugin")
+        .join("plugin.json");
+    let committed: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&committed_path).unwrap()).unwrap();
+
+    let dir = tempfile::tempdir().unwrap();
+    let bin_dir = dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let stub_bin = bin_dir.join("lintropy");
+    write_executable(&stub_bin, "#!/bin/sh\nexit 0\n");
+
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("claude-code")
+        .arg("--dir")
+        .arg(dir.path())
+        .arg("--no-install")
+        .env("PATH", &bin_dir)
+        .assert()
+        .code(0);
+
+    let generated_path = dir
+        .path()
+        .join("lintropy-claude-code-plugin")
+        .join(".claude-plugin")
+        .join("plugin.json");
+    let mut generated: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&generated_path).unwrap()).unwrap();
+    // Runtime emits an absolute path; the committed reference uses the PATH
+    // fallback "lintropy". Normalise the dynamic field before comparing.
+    generated["lspServers"]["lintropy"]["command"] =
+        serde_json::Value::String("lintropy".to_string());
+    assert_eq!(
+        generated, committed,
+        "editors/claude-code/.claude-plugin/plugin.json is out of sync with build_manifest(). \
+         Regenerate: `lintropy install claude-code --no-install` then copy the file over."
+    );
+}
+
+#[test]
+fn marketplace_manifest_points_at_claude_code_plugin() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let marketplace_path = repo_root.join(".claude-plugin").join("marketplace.json");
+    let marketplace: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&marketplace_path).unwrap()).unwrap();
+    assert_eq!(marketplace["name"], "lintropy");
+    let plugins = marketplace["plugins"].as_array().unwrap();
+    let entry = plugins
+        .iter()
+        .find(|p| p["name"] == "lintropy-lsp")
+        .expect("marketplace.json should list the lintropy-lsp plugin");
+    let source = entry["source"].as_str().unwrap();
+    let plugin_root = repo_root.join(source.trim_start_matches("./"));
+    assert!(
+        plugin_root
+            .join(".claude-plugin")
+            .join("plugin.json")
+            .is_file(),
+        "marketplace source {source} does not contain .claude-plugin/plugin.json"
+    );
+}
+
+#[test]
+fn install_vscode_package_only_builds_vsix_from_source() {
     let dir = tempfile::tempdir().unwrap();
     let extension_dir = dir.path().join("extension");
     fs::create_dir_all(&extension_dir).unwrap();
@@ -89,7 +232,7 @@ exit 1
     let out = dir.path().join("out.vsix");
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("install-lsp-extension")
+        .arg("install")
         .arg("vscode")
         .env("LINTROPY_VSCODE_EXTENSION_DIR", &extension_dir)
         .env("LINTROPY_TEST_LOG", &log)
@@ -108,10 +251,10 @@ exit 1
 }
 
 #[test]
-fn install_lsp_extension_rejects_missing_source_dir() {
+fn install_vscode_rejects_missing_source_dir() {
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("install-lsp-extension")
+        .arg("install")
         .arg("vscode")
         .env("LINTROPY_VSCODE_EXTENSION_DIR", "/does/not/exist")
         .arg("--package-only")
@@ -123,27 +266,7 @@ fn install_lsp_extension_rejects_missing_source_dir() {
 }
 
 #[test]
-fn install_editor_jetbrains_unpacks_lsp4ij_template() {
-    let dir = tempfile::tempdir().unwrap();
-    Command::cargo_bin("lintropy")
-        .unwrap()
-        .arg("install-editor")
-        .arg("jetbrains")
-        .arg("--dir")
-        .arg(dir.path())
-        .assert()
-        .code(0)
-        .stdout(predicate::str::contains("lsp4ij-template"));
-
-    assert!(dir
-        .path()
-        .join("lsp4ij-template")
-        .join("template.json")
-        .is_file());
-}
-
-#[test]
-fn install_editor_vscode_builds_and_installs_extension() {
+fn install_vscode_builds_and_installs_extension() {
     let dir = tempfile::tempdir().unwrap();
     let extension_dir = dir.path().join("extension");
     fs::create_dir_all(&extension_dir).unwrap();
@@ -187,7 +310,7 @@ exit 0
 
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("install-editor")
+        .arg("install")
         .arg("vscode")
         .arg("--profile")
         .arg("Default")

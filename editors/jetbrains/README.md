@@ -17,11 +17,11 @@ Community editions.
    "LSP4IJ", install, restart.
 3. Export the bundled template to a known directory:
    ```console
-   lintropy install-lsp-template jetbrains --dir ~/.lintropy/lsp4ij
+   lintropy lsp install jetbrains --dir ~/.lintropy/lsp4ij
    ```
    (Contributors with a checkout of this repo can point LSP4IJ straight
    at [`editors/jetbrains/lsp4ij-template/`](./lsp4ij-template) instead
-   and skip the `install-lsp-template` command.)
+   and skip the install command.)
 4. **View → Tool Windows → LSP Console → `+` → New Language Server →
    Template → Import from directory…** and pick the directory from
    step 3.

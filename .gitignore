@@ -2,6 +2,10 @@
 /target/
 **/*.rs.bk
 
+# Website (Vite) build output
+/website/dist/
+/website/node_modules/
+
 # Worktrees
 .worktrees/
 
@@ -19,6 +23,9 @@
 
 # Cursor / local history
 .history/
+
+# Claude Code local state
+.claude/
 
 # macOS
 .DS_Store

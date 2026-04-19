@@ -12,7 +12,7 @@ use crate::agent_settings;
 use crate::cli::InitArgs;
 use crate::commands::current_dir;
 use crate::exit::{CliError, EXIT_OK};
-use crate::skill::{EMBEDDED_SKILL, SKILL_VERSION};
+use crate::skill::{report_skill, write_skill};
 
 const ROOT_CONFIG: &str = "lintropy.yaml";
 const EXAMPLE_RULE_DIR: &str = ".lintropy";
@@ -112,47 +112,6 @@ fn install_skill(root: &Path, override_dir: Option<&Path>) -> Result<(), CliErro
         report_skill(&target, outcome);
     }
     Ok(())
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum SkillOutcome {
-    Created,
-    Upgraded,
-    Unchanged,
-}
-
-fn write_skill(path: &Path) -> Result<SkillOutcome, CliError> {
-    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
-        fs::create_dir_all(parent)?;
-    }
-    let existed = path.exists();
-    if existed {
-        let current = fs::read_to_string(path)?;
-        if version_header(&current) == Some(SKILL_VERSION) {
-            return Ok(SkillOutcome::Unchanged);
-        }
-    }
-    atomic_write(path, EMBEDDED_SKILL.as_bytes())?;
-    Ok(if existed {
-        SkillOutcome::Upgraded
-    } else {
-        SkillOutcome::Created
-    })
-}
-
-fn version_header(source: &str) -> Option<&str> {
-    let first = source.lines().next()?;
-    let rest = first.trim_start().strip_prefix('#')?.trim_start();
-    rest.strip_prefix("version:").map(str::trim)
-}
-
-fn report_skill(path: &Path, outcome: SkillOutcome) {
-    let label = match outcome {
-        SkillOutcome::Created => "created",
-        SkillOutcome::Upgraded => "upgraded",
-        SkillOutcome::Unchanged => "unchanged",
-    };
-    println!("{label} {}", path.display());
 }
 
 fn print_snippets() {

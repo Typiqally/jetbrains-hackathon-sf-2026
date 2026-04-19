@@ -158,41 +158,31 @@ lintropy lsp
 
 Normally you do not run this directly in a terminal. Your editor starts it for you.
 
-## Editor install commands
+## `lintropy install <target>`
 
-Query highlighting for VS Code or Cursor:
-
-```console
-lintropy install-query-extension vscode
-lintropy install-query-extension cursor
-lintropy install-query-extension --package-only -o ./lintropy-query.vsix
-```
-
-TextMate bundle for JetBrains query highlighting:
+One top-level command covers every target:
 
 ```console
-lintropy install-textmate-bundle
-lintropy install-textmate-bundle ./tmp
-lintropy install-textmate-bundle --force
+lintropy install vscode                          # VS Code
+lintropy install cursor --profile Default        # Cursor, named profile
+lintropy install vscode --package-only -o out.vsix  # just build the .vsix
+lintropy install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
+lintropy install claude-code                     # Claude Code plugin + skill, auto-installs
+lintropy install claude-code --no-install        # write the plugin, print the install command
+lintropy install claude-code --scope user        # user-scoped install
 ```
 
-LSP extension for VS Code or Cursor:
+For VS Code / Cursor this builds the checked-out extension source with
+`pnpm`, packages a local `.vsix`, and either installs it into the editor
+or writes it to disk. For JetBrains it unpacks the LSP4IJ custom template
+for a one-time IDE import. For Claude Code it generates the plugin
+manifest fresh (version + feature-gated extension map + absolute binary
+path), materialises the lintropy skill at
+`.claude/skills/lintropy/SKILL.md` for the matching scope, and shells out
+to `claude plugin install`.
 
-```console
-lintropy install-lsp-extension vscode
-lintropy install-lsp-extension cursor --profile Default
-lintropy install-lsp-extension --package-only -o ./lintropy.vsix
-```
-
-This builds the checked-out extension source with `pnpm`, packages a local
-`.vsix`, and then either installs it into the editor or writes it to disk.
-
-JetBrains LSP4IJ template:
-
-```console
-lintropy install-lsp-template jetbrains
-lintropy install-lsp-template jetbrains ./tmp
-```
+See [`Integrations`](integrations/index.md) for per-target walkthroughs
+including the Claude Code marketplace flow.
 
 ## Suggested daily workflow
 
