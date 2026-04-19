@@ -5,6 +5,14 @@
     "RawRule": {
       "additionalProperties": false,
       "properties": {
+        "description": {
+          "default": null,
+          "description": "Long-form description of what the rule enforces and why; surfaced by `lintropy explain` and IDE hover.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "docs_url": {
           "default": null,
           "description": "Optional URL with docs or remediation guidance for the rule.",

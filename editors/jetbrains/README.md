@@ -68,6 +68,17 @@ reloads and re-lints all open buffers. No IDE restart required.
 - **"Command not found"** — use an absolute path in step 4. The IDE's
   `PATH` may differ from your shell's (especially on macOS when launched
   from the Dock).
+- **No colouring on the `query: |` DSL inside rule YAML files** — LSP4IJ
+  ships semantic-token support but relies on the IDE's colour scheme for
+  the actual paint. Open **View → Tool Windows → Semantic Tokens Inspector**
+  and click inside the query body to confirm tokens arrive (`variable`,
+  `function`, `type`, `string`, `number`, `comment`). If they do but
+  stay invisible, open **Settings → Editor → Color Scheme → Language
+  Server** and assign visible foregrounds to those six keys. If no
+  tokens arrive, restart the server (**LSP Console → right-click
+  Lintropy → Restart**) after rebuilding the binary (`cargo build
+  --bin lintropy`) — semantic-token support landed recently and old
+  binaries don't advertise the capability.
 
 ## Option B — Native IntelliJ Platform LSP API (paid IDEs only)
 

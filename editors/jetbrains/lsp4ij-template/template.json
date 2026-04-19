@@ -1,7 +1,6 @@
 {
   "id": "lintropy",
   "name": "Lintropy",
-  "description": "Live diagnostics, code actions, autoreload on rule changes, and semantic highlighting for the `query:` DSL in lintropy YAML files — all powered by the lintropy structural linter. Requires the `lintropy` binary on PATH. If the IDE cannot find it (e.g. macOS Dock launch), replace the command with the absolute path.",
   "programArgs": {
     "default": "lintropy lsp"
   },

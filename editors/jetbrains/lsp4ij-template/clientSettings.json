@@ -1,4 +1,4 @@
 {
-  "serverTrace": "off",
-  "errorReporting": "as_notification"
+  "caseSensitive": true,
+  "lineCommentPrefix": "#"
 }

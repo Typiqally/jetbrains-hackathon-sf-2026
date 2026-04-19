@@ -176,6 +176,8 @@ struct RawRule {
     /// Replacement text applied to the `@match` span for query-rule autofix.
     #[serde(default)]
     fix: Option<String>,
+    /// Long-form description of what the rule enforces and why; surfaced
+    /// by `lintropy explain` and IDE hover.
     #[serde(default)]
     description: Option<String>,
 }
