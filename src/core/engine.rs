@@ -8,7 +8,7 @@ use std::{
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use rayon::prelude::*;
-use tree_sitter::{Parser, QueryCursor};
+use tree_sitter::{Parser, QueryCursor, Tree};
 
 use super::{
     config::{Config, RuleConfig},
@@ -84,15 +84,36 @@ impl<'a> PreparedRules<'a> {
     /// detection (via extension) and include/exclude glob matching, and is
     /// propagated into each emitted [`Diagnostic`].
     pub fn lint_buffer(&self, path: &Path, src: &[u8]) -> Result<Vec<Diagnostic>> {
-        let Some(language) = crate::langs::language_from_path(path) else {
+        let Some((language, tree)) = self.parse_buffer(path, src, None)? else {
             return Ok(Vec::new());
         };
+        self.run_queries(path, src, language, &tree)
+    }
 
+    /// Parse `src` into a tree-sitter tree, optionally reusing `old_tree`
+    /// for incremental reparsing.
+    ///
+    /// Returns `Ok(None)` when `path` doesn't map to a supported language
+    /// or no rules target that language (common on e.g. README edits).
+    ///
+    /// `old_tree` must already have been mutated via `Tree::edit` to
+    /// reflect the text transformations between the version that
+    /// produced it and the buffer currently in `src`. Passing `None`
+    /// performs a full parse.
+    pub fn parse_buffer(
+        &self,
+        path: &Path,
+        src: &[u8],
+        old_tree: Option<&Tree>,
+    ) -> Result<Option<(Language, Tree)>> {
+        let Some(language) = crate::langs::language_from_path(path) else {
+            return Ok(None);
+        };
         let Some(scoped_rules) = self.by_language.get(&language) else {
-            return Ok(Vec::new());
+            return Ok(None);
         };
         if scoped_rules.is_empty() {
-            return Ok(Vec::new());
+            return Ok(None);
         }
 
         let mut parser = Parser::new();
@@ -104,19 +125,37 @@ impl<'a> PreparedRules<'a> {
                     language.name()
                 ))
             })?;
-        let tree = parser.parse(src, None).ok_or_else(|| {
+        let tree = parser.parse(src, old_tree).ok_or_else(|| {
             LintropyError::Internal(format!("failed to parse {}", path.display()))
         })?;
+        Ok(Some((language, tree)))
+    }
+
+    /// Run every query rule registered for `language` against `tree`.
+    ///
+    /// Exposed separately from [`parse_buffer`] so callers (e.g. the LSP)
+    /// can cache the tree between edits and only pay for the query pass
+    /// on each keystroke.
+    pub fn run_queries(
+        &self,
+        path: &Path,
+        src: &[u8],
+        language: Language,
+        tree: &Tree,
+    ) -> Result<Vec<Diagnostic>> {
+        let Some(scoped_rules) = self.by_language.get(&language) else {
+            return Ok(Vec::new());
+        };
         let root = tree.root_node();
 
         let mut diagnostics = Vec::new();
+        let mut cursor = QueryCursor::new();
         for scoped_rule in scoped_rules {
             if !scoped_rule.matches(path) {
                 continue;
             }
             let query_rule = scoped_rule.rule.query_rule().expect("query rule");
             let compiled = pick_compiled(scoped_rule.rule, path);
-            let mut cursor = QueryCursor::new();
             for query_match in cursor.matches(compiled, root, src) {
                 let pattern_predicates = query_rule
                     .predicates_by_pattern

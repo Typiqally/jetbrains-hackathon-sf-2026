@@ -16,6 +16,7 @@
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::OnceLock;
 
 use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, Documentation, InsertTextFormat, MarkupContent, MarkupKind,
@@ -275,6 +276,11 @@ fn is_capture_char(b: u8) -> bool {
 }
 
 fn predicate_items() -> Vec<CompletionItem> {
+    static CACHE: OnceLock<Vec<CompletionItem>> = OnceLock::new();
+    CACHE.get_or_init(build_predicate_items).clone()
+}
+
+fn build_predicate_items() -> Vec<CompletionItem> {
     PREDICATES
         .iter()
         .map(|p| CompletionItem {
@@ -377,6 +383,10 @@ const PREDICATES: &[Predicate] = &[
 ];
 
 fn field_name_items(lang: Language) -> Vec<CompletionItem> {
+    language_cache(lang, CacheKind::FieldNames, build_field_name_items)
+}
+
+fn build_field_name_items(lang: Language) -> Vec<CompletionItem> {
     let fake = std::path::PathBuf::from(format!(
         "_.{}",
         lang.extensions().first().copied().unwrap_or("src")
@@ -405,6 +415,10 @@ fn field_name_items(lang: Language) -> Vec<CompletionItem> {
 }
 
 fn node_kind_items(lang: Language) -> Vec<CompletionItem> {
+    language_cache(lang, CacheKind::NodeKinds, build_node_kind_items)
+}
+
+fn build_node_kind_items(lang: Language) -> Vec<CompletionItem> {
     let fake = std::path::PathBuf::from(format!(
         "_.{}",
         lang.extensions().first().copied().unwrap_or("src")
@@ -438,6 +452,35 @@ fn node_kind_items(lang: Language) -> Vec<CompletionItem> {
         });
     }
     out
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+enum CacheKind {
+    NodeKinds,
+    FieldNames,
+}
+
+type LanguageCache =
+    std::sync::Mutex<std::collections::HashMap<(Language, CacheKind), &'static [CompletionItem]>>;
+
+/// Per-(language, kind) cache of grammar-derived completion items.
+///
+/// Grammar introspection (`ts.node_kind_count()` + id iteration) is stable
+/// per language for the life of the process, so we pay the cost once and
+/// clone the result on each keystroke.
+fn language_cache(
+    lang: Language,
+    kind: CacheKind,
+    build: fn(Language) -> Vec<CompletionItem>,
+) -> Vec<CompletionItem> {
+    static CACHE: OnceLock<LanguageCache> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Some(items) = cache.lock().unwrap().get(&(lang, kind)) {
+        return items.to_vec();
+    }
+    let built: &'static [CompletionItem] = Box::leak(build(lang).into_boxed_slice());
+    cache.lock().unwrap().insert((lang, kind), built);
+    built.to_vec()
 }
 
 #[cfg(test)]

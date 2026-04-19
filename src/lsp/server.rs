@@ -13,6 +13,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result as JsonRpcResult;
@@ -21,10 +22,10 @@ use tower_lsp::lsp_types::{
     CompletionOptions, CompletionParams, CompletionResponse, DidChangeConfigurationParams,
     DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, InitializeParams, InitializeResult,
-    InitializedParams, MessageType, SemanticTokensFullOptions, SemanticTokensOptions,
-    SemanticTokensParams, SemanticTokensResult, SemanticTokensServerCapabilities,
-    ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
-    WorkDoneProgressOptions,
+    InitializedParams, MessageType, SemanticTokens, SemanticTokensFullOptions,
+    SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
+    SemanticTokensServerCapabilities, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Url, WorkDoneProgressOptions,
 };
 use tower_lsp::{Client, LanguageServer};
 
@@ -47,9 +48,17 @@ use super::document::DocumentStore;
 use super::{completion, rule_lint, semantic_tokens};
 
 /// Shared LSP backend.
+///
+/// Wraps all mutable state + the `Client` in an `Arc<Inner>` so cheap
+/// handles can be passed to spawned tasks without depending on
+/// tower-lsp's internal lifetime management.
 pub struct Backend {
+    inner: Arc<Inner>,
+}
+
+struct Inner {
     client: Client,
-    state: Arc<Mutex<State>>,
+    state: Mutex<State>,
 }
 
 struct State {
@@ -59,31 +68,48 @@ struct State {
     /// resolved context.
     configs: HashMap<PathBuf, CachedConfig>,
     documents: DocumentStore,
+    /// Cached semantic tokens keyed by doc version. Cleared on version
+    /// bump; a single keystroke therefore invalidates exactly once.
+    semantic_tokens_cache: HashMap<Url, (i32, Arc<SemanticTokens>)>,
 }
 
 #[derive(Clone)]
 enum CachedConfig {
-    Loaded(Arc<Config>),
+    Loaded {
+        config: Arc<Config>,
+        loaded_at: SystemTime,
+    },
     Failed,
 }
 
 impl Backend {
     pub fn new(client: Client) -> Self {
         Self {
-            client,
-            state: Arc::new(Mutex::new(State {
-                configs: HashMap::new(),
-                documents: DocumentStore::new(),
-            })),
+            inner: Arc::new(Inner {
+                client,
+                state: Mutex::new(State {
+                    configs: HashMap::new(),
+                    documents: DocumentStore::new(),
+                    semantic_tokens_cache: HashMap::new(),
+                }),
+            }),
         }
     }
 
+    fn client(&self) -> &Client {
+        &self.inner.client
+    }
+
+    fn state_mutex(&self) -> &Mutex<State> {
+        &self.inner.state
+    }
+
     async fn log(&self, ty: MessageType, message: impl Into<String>) {
-        self.client.log_message(ty, message.into()).await;
+        self.inner.client.log_message(ty, message.into()).await;
     }
 
     async fn clear_config_cache(&self) {
-        let mut state = self.state.lock().await;
+        let mut state = self.state_mutex().lock().await;
         state.configs.clear();
     }
 
@@ -100,11 +126,11 @@ impl Backend {
         let root_config = discovery::find_root_config(&start).ok()?;
 
         let cached = {
-            let state = self.state.lock().await;
+            let state = self.state_mutex().lock().await;
             state.configs.get(&root_config).cloned()
         };
         match cached {
-            Some(CachedConfig::Loaded(config)) => return Some(config),
+            Some(CachedConfig::Loaded { config, .. }) => return Some(config),
             Some(CachedConfig::Failed) => return None,
             None => {}
         }
@@ -121,10 +147,14 @@ impl Backend {
                 )
                 .await;
                 let config = Arc::new(config);
-                let mut state = self.state.lock().await;
-                state
-                    .configs
-                    .insert(root_config, CachedConfig::Loaded(config.clone()));
+                let mut state = self.state_mutex().lock().await;
+                state.configs.insert(
+                    root_config,
+                    CachedConfig::Loaded {
+                        config: config.clone(),
+                        loaded_at: SystemTime::now(),
+                    },
+                );
                 Some(config)
             }
             Err(err) => {
@@ -133,48 +163,104 @@ impl Backend {
                     format!("lintropy: config load failed: {err}"),
                 )
                 .await;
-                let mut state = self.state.lock().await;
+                let mut state = self.state_mutex().lock().await;
                 state.configs.insert(root_config, CachedConfig::Failed);
                 None
             }
         }
     }
 
+    /// Drop cached configs whose backing rule files have changed on disk
+    /// since the last load. Returns `true` if anything was invalidated
+    /// (i.e. callers should `republish_all`).
+    ///
+    /// Compares the saved file's mtime against each cached config's
+    /// `loaded_at`: cheaper than re-reading YAML and stops the
+    /// "save no-op → full workspace relint" ping-pong.
+    async fn invalidate_stale_configs(&self, changed_file: &std::path::Path) -> bool {
+        let mtime = match std::fs::metadata(changed_file).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => {
+                // File disappeared or metadata unavailable — be safe,
+                // drop everything so the next lookup reloads.
+                let mut state = self.state_mutex().lock().await;
+                let had = !state.configs.is_empty();
+                state.configs.clear();
+                return had;
+            }
+        };
+        let mut state = self.state_mutex().lock().await;
+        let mut dirty = false;
+        state.configs.retain(|_root, cached| match cached {
+            CachedConfig::Loaded { loaded_at, .. } => {
+                if mtime > *loaded_at {
+                    dirty = true;
+                    false
+                } else {
+                    true
+                }
+            }
+            // Retry failed configs on any rule-file save — maybe the
+            // user is in the middle of fixing a syntax error.
+            CachedConfig::Failed => {
+                dirty = true;
+                false
+            }
+        });
+        dirty
+    }
+
     /// Re-lint every open buffer and publish diagnostics. Used after
     /// config reload; for single-buffer updates call [`publish_for`].
     async fn republish_all(&self) {
-        let snapshot: Vec<(Url, i32, String, PathBuf)> = {
-            let state = self.state.lock().await;
+        let snapshot: Vec<_> = {
+            let state = self.state_mutex().lock().await;
             state
                 .documents
                 .iter()
-                .map(|(uri, doc)| (uri.clone(), doc.version, doc.text.clone(), doc.path.clone()))
+                .map(|(uri, doc)| {
+                    (
+                        uri.clone(),
+                        doc.version,
+                        doc.text.clone(),
+                        doc.path.clone(),
+                        doc.parse.clone(),
+                    )
+                })
                 .collect()
         };
-        for (uri, version, text, path) in snapshot {
-            self.publish_with(uri, version, &text, &path).await;
+        for (uri, version, text, path, parse) in snapshot {
+            self.publish_with(uri, version, &text, &path, parse).await;
         }
     }
 
     /// Lint `uri`'s current buffer and publish diagnostics.
     async fn publish_for(&self, uri: &Url) {
-        let doc = {
-            let state = self.state.lock().await;
+        let snapshot = {
+            let state = self.state_mutex().lock().await;
             state
                 .documents
                 .get(uri)
-                .map(|d| (d.version, d.text.clone(), d.path.clone()))
+                .map(|d| (d.version, d.text.clone(), d.path.clone(), d.parse.clone()))
         };
-        if let Some((version, text, path)) = doc {
-            self.publish_with(uri.clone(), version, &text, &path).await;
+        if let Some((version, text, path, parse)) = snapshot {
+            self.publish_with(uri.clone(), version, &text, &path, parse)
+                .await;
         }
     }
 
-    async fn publish_with(&self, uri: Url, version: i32, text: &str, path: &std::path::Path) {
+    async fn publish_with(
+        &self,
+        uri: Url,
+        version: i32,
+        text: &str,
+        path: &std::path::Path,
+        parse: Option<super::document::CachedParse>,
+    ) {
         let lsp_diags = if is_rule_file(path) {
             rule_lint::lint(path, text)
         } else {
-            match self.lint(text, path).await {
+            match self.lint(&uri, version, text, path, parse).await {
                 Some(diags) => diags
                     .iter()
                     .map(|d| to_lsp(d, text, None))
@@ -182,22 +268,52 @@ impl Backend {
                 None => Vec::new(),
             }
         };
-        self.client
+        self.client()
             .publish_diagnostics(uri, lsp_diags, Some(version))
             .await;
     }
 
     /// Core engine invocation: resolve the nearest config for `path`,
-    /// build `PreparedRules`, and lint the buffer. Returns `None` when
-    /// no config is discoverable for this path.
+    /// reuse the cached parse tree if available, and lint the buffer.
+    ///
+    /// Splits engine work into `parse_buffer` (incremental, reusing the
+    /// prior tree if present) + `run_queries` (pure query traversal) so
+    /// a single keystroke pays only the reparse delta, not a full parse.
+    ///
+    /// The freshly parsed tree is stored back under the document if the
+    /// buffer is still at `version` when we finish — if a newer edit
+    /// raced in, we drop the tree since the document's existing
+    /// `parse.tree` has received `tree.edit` updates we did not apply.
     async fn lint(
         &self,
+        uri: &Url,
+        version: i32,
         text: &str,
         path: &std::path::Path,
+        parse: Option<super::document::CachedParse>,
     ) -> Option<Vec<crate::core::Diagnostic>> {
         let config = self.config_for_path(path).await?;
         let prepared = PreparedRules::prepare(config.as_ref()).ok()?;
-        prepared.lint_buffer(path, text.as_bytes()).ok()
+        let src = text.as_bytes();
+        // Only reuse the cached tree if it was parsed against the same
+        // grammar we'd pick now — guards against a rename that flips
+        // the file's language (e.g. `.ts` → `.tsx`).
+        let detected = crate::langs::language_from_path(path);
+        let old_tree_ref = parse
+            .as_ref()
+            .filter(|p| Some(p.language) == detected)
+            .map(|p| &p.tree);
+        let (language, tree) = prepared.parse_buffer(path, src, old_tree_ref).ok()??;
+        let diagnostics = prepared.run_queries(path, src, language, &tree).ok()?;
+        {
+            let mut state = self.state_mutex().lock().await;
+            state.documents.store_parse(
+                uri,
+                version,
+                super::document::CachedParse { language, tree },
+            );
+        }
+        Some(diagnostics)
     }
 }
 
@@ -252,14 +368,34 @@ impl LanguageServer for Backend {
         params: SemanticTokensParams,
     ) -> JsonRpcResult<Option<SemanticTokensResult>> {
         let uri = params.text_document.uri;
-        let text = {
-            let state = self.state.lock().await;
-            state.documents.get(&uri).map(|d| d.text.clone())
+        // Fast path: tokens are stable per `(uri, version)` — return the
+        // cached result without re-scanning if nothing has changed since
+        // the last request.
+        let (version, text) = {
+            let state = self.state_mutex().lock().await;
+            if let Some((ver, tokens)) = state.semantic_tokens_cache.get(&uri) {
+                if let Some(doc) = state.documents.get(&uri) {
+                    if doc.version == *ver {
+                        return Ok(Some(SemanticTokensResult::Tokens((**tokens).clone())));
+                    }
+                }
+            }
+            match state.documents.get(&uri) {
+                Some(doc) => (doc.version, doc.text.clone()),
+                None => return Ok(None),
+            }
         };
-        let Some(text) = text else {
-            return Ok(None);
+        let tokens = match semantic_tokens::tokenize(&text) {
+            Some(t) => t,
+            None => return Ok(None),
         };
-        Ok(semantic_tokens::tokenize(&text).map(SemanticTokensResult::Tokens))
+        {
+            let mut state = self.state_mutex().lock().await;
+            state
+                .semantic_tokens_cache
+                .insert(uri, (version, Arc::new(tokens.clone())));
+        }
+        Ok(Some(SemanticTokensResult::Tokens(tokens)))
     }
 
     async fn initialized(&self, _: InitializedParams) {
@@ -273,7 +409,7 @@ impl LanguageServer for Backend {
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let doc = params.text_document;
         {
-            let mut state = self.state.lock().await;
+            let mut state = self.state_mutex().lock().await;
             state.documents.set(doc.uri.clone(), doc.text, doc.version);
         }
         self.publish_for(&doc.uri).await;
@@ -287,27 +423,31 @@ impl LanguageServer for Backend {
         // `range == None` is a full-buffer replace; each `range == Some`
         // patches only that UTF-16 range.
         {
-            let mut state = self.state.lock().await;
+            let mut state = self.state_mutex().lock().await;
             for change in params.content_changes {
                 state
                     .documents
                     .apply_edit(&uri, change.range, &change.text, version);
             }
+            // Version bumped; cached semantic tokens are now stale.
+            state.semantic_tokens_cache.remove(&uri);
         }
         self.publish_for(&uri).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        let is_config_file = params
-            .text_document
-            .uri
-            .to_file_path()
-            .ok()
-            .as_deref()
-            .is_some_and(is_rule_file);
+        let path = params.text_document.uri.to_file_path().ok();
+        let is_config_file = path.as_deref().is_some_and(is_rule_file);
         if is_config_file {
-            self.clear_config_cache().await;
-            self.republish_all().await;
+            let changed = path.expect("is_config_file implies path");
+            if self.invalidate_stale_configs(&changed).await {
+                self.republish_all().await;
+            } else {
+                // File save with no on-disk change (touch-save, autosave
+                // of an unmodified buffer). Re-publish just this buffer
+                // against the unchanged config.
+                self.publish_for(&params.text_document.uri).await;
+            }
         } else {
             // Nothing to do — we lint on didChange. Republish just in case
             // the client flushed a partial state between changes.
@@ -318,11 +458,14 @@ impl LanguageServer for Backend {
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         let uri = params.text_document.uri;
         {
-            let mut state = self.state.lock().await;
+            let mut state = self.state_mutex().lock().await;
             state.documents.remove(&uri);
+            state.semantic_tokens_cache.remove(&uri);
         }
         // Clear diagnostics so the editor doesn't keep them after close.
-        self.client.publish_diagnostics(uri, Vec::new(), None).await;
+        self.client()
+            .publish_diagnostics(uri, Vec::new(), None)
+            .await;
     }
 
     async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
@@ -341,7 +484,7 @@ impl LanguageServer for Backend {
     ) -> JsonRpcResult<Option<CompletionResponse>> {
         let uri = params.text_document_position.text_document.uri;
         let (text, path) = {
-            let state = self.state.lock().await;
+            let state = self.state_mutex().lock().await;
             match state.documents.get(&uri) {
                 Some(doc) => (doc.text.clone(), doc.path.clone()),
                 None => return Ok(None),
@@ -360,15 +503,20 @@ impl LanguageServer for Backend {
         params: CodeActionParams,
     ) -> JsonRpcResult<Option<CodeActionResponse>> {
         let uri = params.text_document.uri.clone();
-        let (text, path) = {
-            let state = self.state.lock().await;
+        let (version, text, path, parse) = {
+            let state = self.state_mutex().lock().await;
             match state.documents.get(&uri) {
-                Some(doc) => (doc.text.clone(), doc.path.clone()),
+                Some(doc) => (
+                    doc.version,
+                    doc.text.clone(),
+                    doc.path.clone(),
+                    doc.parse.clone(),
+                ),
                 None => return Ok(None),
             }
         };
 
-        let diagnostics = match self.lint(&text, &path).await {
+        let diagnostics = match self.lint(&uri, version, &text, &path, parse).await {
             Some(d) => d,
             None => return Ok(None),
         };

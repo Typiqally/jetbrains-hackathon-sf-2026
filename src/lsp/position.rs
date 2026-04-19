@@ -13,6 +13,7 @@
 //! tree-sitter already parsed it).
 
 use tower_lsp::lsp_types::{Position, Range};
+use tree_sitter::{InputEdit, Point};
 
 /// Convert a 0-based UTF-8 byte offset into an LSP [`Position`].
 ///
@@ -76,6 +77,59 @@ pub fn position_to_byte(src: &str, pos: Position) -> usize {
         utf16_remaining -= units;
     }
     src.len()
+}
+
+/// Describe a content-change to tree-sitter before [`apply_change`] is
+/// run, using the *pre-edit* text as the source of coordinates.
+///
+/// The returned [`InputEdit`] feeds `Tree::edit` so the cached parse
+/// tree can be reused for the next parse. Points carry byte-column
+/// offsets (tree-sitter's convention), not UTF-16 code units.
+pub fn compute_input_edit(text: &str, range: Range, new_text: &str) -> InputEdit {
+    let start_byte = position_to_byte(text, range.start);
+    let old_end_byte = position_to_byte(text, range.end).max(start_byte);
+    let new_end_byte = start_byte + new_text.len();
+
+    let start_position = byte_point(text, start_byte);
+    let old_end_position = byte_point(text, old_end_byte);
+    let new_end_position = shifted_point(start_position, new_text);
+
+    InputEdit {
+        start_byte,
+        old_end_byte,
+        new_end_byte,
+        start_position,
+        old_end_position,
+        new_end_position,
+    }
+}
+
+/// Byte offset into `text` → tree-sitter [`Point`] (row + byte-column).
+fn byte_point(text: &str, offset: usize) -> Point {
+    let offset = offset.min(text.len());
+    let line_start = text[..offset].rfind('\n').map(|i| i + 1).unwrap_or(0);
+    let row = text[..line_start].matches('\n').count();
+    Point {
+        row,
+        column: offset - line_start,
+    }
+}
+
+/// Point after writing `inserted` starting at `start`.
+fn shifted_point(start: Point, inserted: &str) -> Point {
+    let newlines = inserted.matches('\n').count();
+    if newlines == 0 {
+        Point {
+            row: start.row,
+            column: start.column + inserted.len(),
+        }
+    } else {
+        let last_nl = inserted.rfind('\n').expect("newlines > 0");
+        Point {
+            row: start.row + newlines,
+            column: inserted.len() - last_nl - 1,
+        }
+    }
 }
 
 /// Apply a single LSP content-change to `text` in place.
