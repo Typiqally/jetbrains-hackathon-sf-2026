@@ -214,6 +214,7 @@ lintropy install vscode        # VS Code
 lintropy install cursor        # Cursor
 lintropy install jetbrains     # JetBrains IDEs (LSP4IJ template)
 lintropy install claude-code   # Claude Code plugin + skill
+lintropy install codex         # Codex plugin + skill
 ```
 
 Each target gives you live diagnostics, quickfixes, config reload, and semantic-token highlighting for the `query: |` DSL. No separate "query syntax" extension. Per-integration walkthroughs live under [`docs/integrations/`](docs/integrations/index.md).
@@ -269,6 +270,28 @@ lintropy install claude-code
 ```
 
 The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path) and writes it into `./lintropy-claude-code-plugin/` with the lintropy skill bundled at `skills/lintropy/SKILL.md` inside the same directory, then prints the `claude --plugin-dir <path>` invocation you should run. The skill loads and unloads with the plugin. Use `/reload-plugins` to pick up edits without restarting.
+
+### Codex
+
+```console
+lintropy install codex
+```
+
+This repo itself is a local Codex marketplace via
+`.agents/plugins/marketplace.json`, so you can point Codex at the checkout:
+
+```console
+codex marketplace add /absolute/path/to/lintropy
+```
+
+`lintropy install codex` generates the same shape into
+`./lintropy-codex-marketplace/` for ad hoc local installs. The marketplace
+contains a mirrored plugin under `plugins/lintropy/` with
+`.codex-plugin/plugin.json` plus the bundled lintropy skill at
+`skills/lintropy/SKILL.md`. This gives Codex native lintropy guidance for
+rule authoring and debug loops inside the repo. Codex plugins do not
+currently expose an editor-side LSP registration surface, so for live
+diagnostics you should still install one of the editor integrations above.
 
 ### JSON Schemas
 

@@ -1,0 +1,30 @@
+{
+  "name": "lintropy",
+  "owner": {
+    "name": "rns70 & Typiqally",
+    "email": "12190745+Typiqally@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Lintropy's Codex integrations.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "lintropy",
+      "source": {
+        "source": "local",
+        "path": "."
+      },
+      "description": "Bundles the lintropy skill for Codex so agents can write, debug, and run lintropy rules with repo-local guidance.",
+      "version": "0.1.0",
+      "homepage": "https://github.com/Typiqally/lintropy",
+      "repository": "https://github.com/Typiqally/lintropy",
+      "license": "MIT",
+      "keywords": [
+        "skills",
+        "linter",
+        "tree-sitter"
+      ]
+    }
+  ]
+}

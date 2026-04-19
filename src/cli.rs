@@ -196,6 +196,8 @@ pub enum InstallTarget {
     /// Claude Code — writes the plugin manifest and prints the `claude --plugin-dir` invocation.
     #[value(name = "claude-code")]
     ClaudeCode,
+    /// Codex — writes a Codex plugin bundle with the lintropy skill.
+    Codex,
 }
 
 #[derive(Debug, Args)]
@@ -204,7 +206,7 @@ pub struct InstallArgs {
     #[arg(value_enum)]
     pub target: InstallTarget,
 
-    /// Parent directory for the materialised assets (JetBrains / Claude Code).
+    /// Parent directory for the materialised assets (JetBrains / Claude Code / Codex).
     /// Defaults to the current working directory.
     #[arg(long, value_name = "PATH")]
     pub dir: Option<PathBuf>,

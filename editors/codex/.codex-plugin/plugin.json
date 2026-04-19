@@ -1,0 +1,35 @@
+{
+  "name": "lintropy",
+  "version": "0.1.0",
+  "description": "Bundles the lintropy skill for Codex so agents can write, debug, and run lintropy rules with repo-local guidance.",
+  "author": {
+    "name": "rns70 & Typiqally",
+    "email": "12190745+Typiqally@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/Typiqally/lintropy",
+  "repository": "https://github.com/Typiqally/lintropy",
+  "license": "MIT",
+  "keywords": [
+    "lintropy",
+    "linting",
+    "tree-sitter",
+    "skills",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lintropy",
+    "shortDescription": "Lintropy rule authoring and debugging workflows for Codex",
+    "longDescription": "Use lintropy from Codex to write or debug tree-sitter-based lint rules, inspect ASTs with `lintropy ts-parse`, validate configs, and run targeted `lintropy check` loops inside the repo.",
+    "developerName": "Typiqally",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Typiqally/lintropy",
+    "defaultPrompt": "Use lintropy to inspect this repo's rules, write or debug a lintropy rule, and run lintropy checks to verify the change",
+    "brandColor": "#1d4ed8"
+  }
+}

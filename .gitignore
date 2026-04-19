@@ -10,6 +10,10 @@
 # machine-specific absolute paths)
 /lintropy-claude-code-plugin/
 
+# `lintropy install codex` output (regenerated locally)
+/lintropy-codex-plugin/
+/lintropy-codex-marketplace/
+
 # Worktrees
 .worktrees/
 

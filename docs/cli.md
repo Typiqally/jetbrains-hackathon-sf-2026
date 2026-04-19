@@ -147,6 +147,7 @@ lintropy install cursor --profile Default        # Cursor, named profile
 lintropy install vscode --package-only -o out.vsix  # just build the .vsix
 lintropy install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
 lintropy install claude-code                     # Claude Code plugin + bundled skill
+lintropy install codex                           # Codex local marketplace + bundled skill
 ```
 
 For VS Code / Cursor this builds the checked-out extension source with
@@ -157,7 +158,13 @@ manifest fresh (version + feature-gated extension map + absolute binary
 path), bundles the lintropy skill inside the plugin directory at
 `skills/lintropy/SKILL.md`, and prints the `claude --plugin-dir <path>`
 invocation needed to load the plugin. The skill loads and unloads with
-the plugin.
+the plugin. For Codex it writes a native `.codex-plugin/plugin.json`
+bundle inside a generated local marketplace root with
+`.agents/plugins/marketplace.json`. Add that directory with
+`codex marketplace add <path>`, then install the plugin from the
+marketplace. Codex plugins currently package skills rather than
+registering external LSP servers, so this target is for repo-aware
+lintropy workflows inside Codex, not live editor diagnostics.
 
 See [`Integrations`](integrations/index.md) for per-target walkthroughs
 including the Claude Code marketplace flow.

@@ -29,6 +29,7 @@ export const nav: NavGroup[] = [
       { title: "VS Code & Cursor", slug: "integrations/vscode" },
       { title: "JetBrains IDEs", slug: "integrations/jetbrains" },
       { title: "Claude Code", slug: "integrations/claude-code" },
+      { title: "Codex", slug: "integrations/codex" },
       { title: "Other LSP editors", slug: "integrations/other-editors" },
       { title: "Other agents", slug: "integrations/other-agents" },
     ],

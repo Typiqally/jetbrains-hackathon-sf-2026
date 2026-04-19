@@ -1,16 +1,11 @@
-severity: warning
-description: |
-  Flags `.unwrap()` on Result/Option outside macro bodies. Unwraps
-  panic in production paths; prefer `?`, `.expect("<context>")`, or
-  an explicit `match`.
-message: "avoid .unwrap() on `{{recv}}`"
-fix: '{{recv}}.expect("TODO: handle error")'
 language: rust
+severity: warning
+message: "avoid .unwrap() on `{{recv}}` — handle the error explicitly"
+include: ["src/**/*.rs"]
 query: |
   (call_expression
     function: (field_expression
       value: (_) @recv
       field: (field_identifier) @method)
-    arguments: (arguments)
-    (#eq? @method "unwrap")
-    (#not-has-ancestor? @method "macro_invocation")) @match
+    (#eq? @method "unwrap")) @match
+fix: '{{recv}}.expect("TODO: handle error")'

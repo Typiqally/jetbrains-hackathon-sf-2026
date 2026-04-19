@@ -12,8 +12,11 @@
 //!   lintropy skill at `<plugin>/skills/lintropy/SKILL.md`, and prints
 //!   the `claude --plugin-dir <dir>` invocation the user should run to
 //!   pick it up.
+//! - **codex**: writes a Codex plugin bundle with `.codex-plugin/plugin.json`
+//!   and the same bundled lintropy skill under `skills/lintropy/`.
 
 pub(crate) mod claude_code;
+pub(crate) mod codex;
 pub(crate) mod lsp_extension;
 pub(crate) mod lsp_template;
 
@@ -26,6 +29,10 @@ pub fn run(args: InstallArgs) -> Result<u8, CliError> {
         InstallTarget::Cursor => install_vsix(args, lsp_extension::VsixEditor::Cursor),
         InstallTarget::Jetbrains => lsp_template::install_jetbrains(args.dir, args.force),
         InstallTarget::ClaudeCode => claude_code::run(claude_code::ClaudeCodeInstall {
+            dir: args.dir,
+            force: args.force,
+        }),
+        InstallTarget::Codex => codex::run(codex::CodexInstall {
             dir: args.dir,
             force: args.force,
         }),

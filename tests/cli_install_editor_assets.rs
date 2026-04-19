@@ -131,6 +131,87 @@ fn install_claude_code_prints_plugin_dir_invocation_and_bundles_skill() {
 }
 
 #[test]
+fn install_codex_writes_manifest() {
+    let dir = tempfile::tempdir().unwrap();
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("codex")
+        .arg("--dir")
+        .arg(dir.path())
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("extracted"))
+        .stdout(predicate::str::contains("codex marketplace add"))
+        .stdout(predicate::str::contains("lintropy-codex-marketplace"));
+
+    let marketplace = dir
+        .path()
+        .join("lintropy-codex-marketplace")
+        .join(".agents")
+        .join("plugins")
+        .join("marketplace.json");
+    assert!(marketplace.is_file());
+    let marketplace_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&marketplace).unwrap()).unwrap();
+    assert_eq!(marketplace_json["name"], "lintropy");
+    assert_eq!(
+        marketplace_json["metadata"]["version"],
+        env!("CARGO_PKG_VERSION")
+    );
+
+    let manifest = dir
+        .path()
+        .join("lintropy-codex-marketplace")
+        .join("plugins")
+        .join("lintropy")
+        .join(".codex-plugin")
+        .join("plugin.json");
+    assert!(manifest.is_file());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&manifest).unwrap()).unwrap();
+    assert_eq!(parsed["name"], "lintropy");
+    assert_eq!(parsed["version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(parsed["skills"], "./skills/");
+    assert_eq!(parsed["interface"]["category"], "Coding");
+}
+
+#[test]
+fn install_codex_bundles_skill() {
+    let dir = tempfile::tempdir().unwrap();
+
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("codex")
+        .arg("--dir")
+        .arg(dir.path())
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("lintropy-codex-marketplace"));
+
+    let skill = dir
+        .path()
+        .join("lintropy-codex-marketplace")
+        .join("plugins")
+        .join("lintropy")
+        .join("skills")
+        .join("lintropy")
+        .join("SKILL.md");
+    assert!(skill.is_file(), "SKILL.md must be bundled inside plugin");
+    let first_line = fs::read_to_string(&skill)
+        .unwrap()
+        .lines()
+        .next()
+        .unwrap()
+        .to_string();
+    assert!(
+        first_line.starts_with("# version:"),
+        "first line must carry `# version:` header, got: {first_line}"
+    );
+}
+
+#[test]
 fn committed_claude_code_plugin_matches_generated_manifest() {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let committed_path = repo_root
@@ -176,6 +257,71 @@ fn committed_claude_code_plugin_matches_generated_manifest() {
 }
 
 #[test]
+fn committed_codex_plugin_matches_generated_manifest() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let committed_path = repo_root
+        .join("editors")
+        .join("codex")
+        .join(".codex-plugin")
+        .join("plugin.json");
+    let committed: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&committed_path).unwrap()).unwrap();
+
+    let dir = tempfile::tempdir().unwrap();
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .arg("install")
+        .arg("codex")
+        .arg("--dir")
+        .arg(dir.path())
+        .assert()
+        .code(0);
+
+    let generated_path = dir
+        .path()
+        .join("lintropy-codex-marketplace")
+        .join("plugins")
+        .join("lintropy")
+        .join(".codex-plugin")
+        .join("plugin.json");
+    let generated: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&generated_path).unwrap()).unwrap();
+    assert_eq!(
+        generated, committed,
+        "editors/codex/.codex-plugin/plugin.json is out of sync with build_manifest(). \
+         Regenerate: `lintropy install codex` then copy the file over."
+    );
+}
+
+#[test]
+fn repo_codex_marketplace_points_at_committed_plugin() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let marketplace_path = repo_root
+        .join(".agents")
+        .join("plugins")
+        .join("marketplace.json");
+    let marketplace: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&marketplace_path).unwrap()).unwrap();
+    assert_eq!(marketplace["name"], "lintropy");
+    let plugins = marketplace["plugins"].as_array().unwrap();
+    let entry = plugins
+        .iter()
+        .find(|p| p["name"] == "lintropy")
+        .expect("marketplace.json should list the lintropy plugin");
+    let source = &entry["source"];
+    assert_eq!(source["source"], "local");
+    let path = source["path"].as_str().unwrap();
+    let plugin_root = repo_root.join(path.trim_start_matches("./"));
+    assert!(
+        plugin_root
+            .join(".codex-plugin")
+            .join("plugin.json")
+            .is_file(),
+        "marketplace source {path} does not contain .codex-plugin/plugin.json"
+    );
+}
+
+#[test]
 fn committed_claude_code_skill_matches_canonical() {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let canonical = fs::read_to_string(repo_root.join("skill").join("SKILL.md")).unwrap();
@@ -192,6 +338,26 @@ fn committed_claude_code_skill_matches_canonical() {
         canonical, bundled,
         "editors/claude-code/skills/lintropy/SKILL.md is out of sync with skill/SKILL.md. \
          Run `cp skill/SKILL.md editors/claude-code/skills/lintropy/SKILL.md`."
+    );
+}
+
+#[test]
+fn committed_codex_skill_matches_canonical() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let canonical = fs::read_to_string(repo_root.join("skill").join("SKILL.md")).unwrap();
+    let bundled = fs::read_to_string(
+        repo_root
+            .join("editors")
+            .join("codex")
+            .join("skills")
+            .join("lintropy")
+            .join("SKILL.md"),
+    )
+    .unwrap();
+    assert_eq!(
+        canonical, bundled,
+        "editors/codex/skills/lintropy/SKILL.md is out of sync with skill/SKILL.md. \
+         Run `cp skill/SKILL.md editors/codex/skills/lintropy/SKILL.md`."
     );
 }
 
