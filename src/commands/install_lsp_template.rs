@@ -1,4 +1,4 @@
-//! Back-end for `lintropy lsp install jetbrains` — unpack the embedded
+//! Back-end for `lintropy install jetbrains` — unpack the embedded
 //! LSP4IJ custom template into a user-chosen directory so JetBrains
 //! IDEs can import it via **LSP Console → `+` → Template → Import
 //! from directory**.

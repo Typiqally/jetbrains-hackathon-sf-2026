@@ -8,10 +8,11 @@
 //! - **jetbrains**: unpacks the LSP4IJ custom template into `--dir`
 //!   (defaults to cwd). Still needs one IDE-side import step.
 //! - **claude-code**: generates the plugin manifest fresh (version,
-//!   feature-gated extension map, absolute `command` path) and shells
-//!   out to `claude plugin install <dir> --scope <scope>` when the
-//!   `claude` CLI is on `PATH`. Pass `--no-install` to skip the shell
-//!   out and print the command instead.
+//!   feature-gated extension map, absolute `command` path), materialises
+//!   the lintropy skill at `.claude/skills/lintropy/SKILL.md` for the
+//!   matching scope, and shells out to `claude plugin install <dir>
+//!   --scope <scope>` when the `claude` CLI is on `PATH`. Pass
+//!   `--no-install` to skip the shell-out and print the command instead.
 
 use crate::cli::{InstallArgs, InstallTarget};
 use crate::commands::{install_claude_code_plugin, install_lsp_extension, install_lsp_template};
@@ -28,7 +29,6 @@ pub fn run(args: InstallArgs) -> Result<u8, CliError> {
                 force: args.force,
                 scope: args.scope,
                 no_install: args.no_install,
-                with_skill: args.with_skill,
             })
         }
     }

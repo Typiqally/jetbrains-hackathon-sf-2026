@@ -1,5 +1,6 @@
-//! Back-end for `lintropy lsp install claude-code` — write a Claude Code
-//! plugin directory that registers `lintropy lsp` as a Language Server.
+//! Back-end for `lintropy install claude-code` — write a Claude Code
+//! plugin directory that registers `lintropy lsp` as a Language Server
+//! and materialise the lintropy skill alongside it.
 //!
 //! The plugin manifest is generated at extract time, not embedded, so:
 //!
@@ -40,7 +41,6 @@ pub(crate) struct ClaudeCodeInstall {
     pub force: bool,
     pub scope: PluginScope,
     pub no_install: bool,
-    pub with_skill: bool,
 }
 
 pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
@@ -53,9 +53,7 @@ pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
 
     println!("extracted {}", target.display());
 
-    if args.with_skill {
-        install_skill_for_scope(args.scope)?;
-    }
+    install_skill_for_scope(args.scope)?;
 
     if args.no_install {
         println!();

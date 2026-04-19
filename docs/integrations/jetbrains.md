@@ -5,7 +5,7 @@ title: JetBrains IDEs
 # JetBrains IDEs
 
 ```console
-lintropy lsp install jetbrains --dir ~/.lintropy
+lintropy install jetbrains --dir ~/.lintropy
 ```
 
 This unpacks the [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) custom server template. One import step in the IDE:

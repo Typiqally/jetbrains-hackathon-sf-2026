@@ -158,18 +158,18 @@ lintropy lsp
 
 Normally you do not run this directly in a terminal. Your editor starts it for you.
 
-## Editor install commands
+## `lintropy install <target>`
 
-One subcommand covers every target:
+One top-level command covers every target:
 
 ```console
-lintropy lsp install vscode                          # VS Code
-lintropy lsp install cursor --profile Default        # Cursor, named profile
-lintropy lsp install vscode --package-only -o out.vsix  # just build the .vsix
-lintropy lsp install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
-lintropy lsp install claude-code                     # Claude Code plugin, auto-installs
-lintropy lsp install claude-code --no-install        # write the plugin, print the install command
-lintropy lsp install claude-code --scope user        # user-scoped install
+lintropy install vscode                          # VS Code
+lintropy install cursor --profile Default        # Cursor, named profile
+lintropy install vscode --package-only -o out.vsix  # just build the .vsix
+lintropy install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
+lintropy install claude-code                     # Claude Code plugin + skill, auto-installs
+lintropy install claude-code --no-install        # write the plugin, print the install command
+lintropy install claude-code --scope user        # user-scoped install
 ```
 
 For VS Code / Cursor this builds the checked-out extension source with
@@ -177,7 +177,9 @@ For VS Code / Cursor this builds the checked-out extension source with
 or writes it to disk. For JetBrains it unpacks the LSP4IJ custom template
 for a one-time IDE import. For Claude Code it generates the plugin
 manifest fresh (version + feature-gated extension map + absolute binary
-path) and shells out to `claude plugin install`.
+path), materialises the lintropy skill at
+`.claude/skills/lintropy/SKILL.md` for the matching scope, and shells out
+to `claude plugin install`.
 
 See [`Integrations`](integrations/index.md) for per-target walkthroughs
 including the Claude Code marketplace flow.

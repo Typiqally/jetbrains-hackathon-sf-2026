@@ -1,4 +1,4 @@
-//! Back-end for `lintropy lsp install vscode|cursor` — build the VS Code /
+//! Back-end for `lintropy install vscode|cursor` — build the VS Code /
 //! Cursor extension from the local checkout, package it into a `.vsix`,
 //! and hand that artifact to the editor's `--install-extension` flag.
 //!

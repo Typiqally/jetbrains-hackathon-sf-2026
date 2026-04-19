@@ -5,8 +5,8 @@ title: VS Code & Cursor
 # VS Code and Cursor
 
 ```console
-lintropy lsp install vscode
-lintropy lsp install cursor
+lintropy install vscode
+lintropy install cursor
 ```
 
 This builds the bundled extension source into a `.vsix` and hands it to `code --install-extension` / `cursor --install-extension`. The extension carries:

@@ -37,8 +37,10 @@ pub enum Command {
     /// Parse a source file with tree-sitter and print the S-expression.
     #[command(name = "ts-parse")]
     TsParse(TsParseArgs),
-    /// Run the Language Server Protocol backend, or install its editor bindings.
+    /// Run the Language Server Protocol backend over stdio.
     Lsp(LspArgs),
+    /// Install lintropy into an editor or agent (LSP client, plugin, skill).
+    Install(InstallArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -179,15 +181,6 @@ pub struct LspArgs {
     /// Accept VS Code-style transport hints; stdio is the only mode today.
     #[arg(long, hide = true)]
     pub stdio: bool,
-
-    #[command(subcommand)]
-    pub subcommand: Option<LspSubcommand>,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum LspSubcommand {
-    /// Install the lintropy LSP integration for the given editor or agent.
-    Install(InstallArgs),
 }
 
 #[derive(Debug, Args)]
@@ -315,12 +308,6 @@ pub struct InstallArgs {
     /// `claude plugin install`. Prints the command instead.
     #[arg(long = "no-install")]
     pub no_install: bool,
-
-    /// Claude Code: also materialise the lintropy `SKILL.md` into the
-    /// agent skill directory matching `--scope` (`./.claude/skills/lintropy/`
-    /// for project, `$HOME/.claude/skills/lintropy/` for user).
-    #[arg(long = "with-skill")]
-    pub with_skill: bool,
 
     /// VS Code / Cursor: build the `.vsix` but do not install it.
     #[arg(long = "package-only")]

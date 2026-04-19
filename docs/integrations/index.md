@@ -7,7 +7,7 @@ title: Integrations
 Lintropy ships a single LSP server (`lintropy lsp`) and one install command that wires it into every supported editor or agent:
 
 ```console
-lintropy lsp install <target>
+lintropy install <target>
 ```
 
 `<target>` is one of `vscode`, `cursor`, `jetbrains`, `claude-code`.
@@ -26,7 +26,7 @@ lintropy lsp install <target>
 For most teams:
 
 1. Run `lintropy init --with-skill`.
-2. Run `lintropy lsp install <target>` for your editor and, if you use Claude Code, for `claude-code`.
+2. Run `lintropy install <target>` for your editor and, if you use Claude Code, for `claude-code` (that one also drops the skill).
 3. Keep `lintropy check .` in CI.
 4. Use the hook only for fast feedback after edits, not as the only enforcement point.
 

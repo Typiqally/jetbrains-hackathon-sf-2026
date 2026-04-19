@@ -1,6 +1,6 @@
 //! Embedded canonical `SKILL.md` + version tag + the one-call helper
-//! used by both `init --with-skill` and `lsp install claude-code
-//! --with-skill` to materialise the skill into agent skill directories.
+//! used by both `init --with-skill` and `install claude-code` to
+//! materialise the skill into agent skill directories.
 //!
 //! `SKILL_VERSION` must match the `# version: <semver>` header on the
 //! first line of `SKILL.md`; `write_skill` uses it to decide whether to

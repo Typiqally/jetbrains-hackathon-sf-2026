@@ -208,10 +208,10 @@ is what `init --with-skill` installs into agent skill directories.
 Lintropy ships one LSP server (`lintropy lsp`) and one install command that wires it into every supported target:
 
 ```console
-lintropy lsp install vscode        # VS Code
-lintropy lsp install cursor        # Cursor
-lintropy lsp install jetbrains     # JetBrains IDEs (LSP4IJ template)
-lintropy lsp install claude-code   # Claude Code plugin
+lintropy install vscode        # VS Code
+lintropy install cursor        # Cursor
+lintropy install jetbrains     # JetBrains IDEs (LSP4IJ template)
+lintropy install claude-code   # Claude Code plugin + skill
 ```
 
 Each target gives you live diagnostics, quickfixes, config reload, and semantic-token highlighting for the `query: |` DSL. No separate "query syntax" extension. Per-integration walkthroughs live under [`docs/integrations/`](docs/integrations/index.md).
@@ -219,8 +219,8 @@ Each target gives you live diagnostics, quickfixes, config reload, and semantic-
 ### VS Code and Cursor
 
 ```console
-lintropy lsp install vscode        # or: cursor
-lintropy lsp install cursor --profile Default
+lintropy install vscode        # or: cursor
+lintropy install cursor --profile Default
 ```
 
 Builds the bundled extension source into a `.vsix` and installs it via `code --install-extension` / `cursor --install-extension`. The extension resolves the `lintropy` binary in this order: explicit `lintropy.path` setting → `PATH` → extension-managed download from the matching GitHub release.
@@ -228,7 +228,7 @@ Builds the bundled extension source into a `.vsix` and installs it via `code --i
 Package the `.vsix` without installing (useful for CI):
 
 ```console
-lintropy lsp install vscode --package-only -o ./lintropy.vsix
+lintropy install vscode --package-only -o ./lintropy.vsix
 ```
 
 Config resolution is per file rather than one workspace-wide root: each source file uses the nearest ancestor `lintropy.yaml`. A newly added nested `lintropy.yaml` creates a fresh rule context for that subtree, while `.lintropy/` changes merge into the rules for the already-resolved root and republish diagnostics for open files.
@@ -238,7 +238,7 @@ See [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md) for
 ### JetBrains IDEs
 
 ```console
-lintropy lsp install jetbrains --dir ~/.lintropy
+lintropy install jetbrains --dir ~/.lintropy
 ```
 
 Unpacks the [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) custom server template to `~/.lintropy/lsp4ij-template`. One import step in the IDE:
@@ -263,12 +263,12 @@ The marketplace manifest lives at the repo root so this works from any clean Cla
 **CLI.** When you want the plugin manifest to pin the absolute path of your local `lintropy` binary:
 
 ```console
-lintropy lsp install claude-code                    # --scope project by default
-lintropy lsp install claude-code --scope user       # personal-only
-lintropy lsp install claude-code --no-install       # print the claude plugin install command instead
+lintropy install claude-code                    # --scope project by default
+lintropy install claude-code --scope user       # personal-only
+lintropy install claude-code --no-install       # print the claude plugin install command instead
 ```
 
-The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it to the cwd, and shells out to `claude plugin install` when the `claude` CLI is on `PATH`.
+The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it to the cwd alongside the lintropy skill at `.claude/skills/lintropy/SKILL.md`, and shells out to `claude plugin install` when the `claude` CLI is on `PATH`.
 
 ### JSON Schemas
 

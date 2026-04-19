@@ -13,7 +13,6 @@ fn install_jetbrains_extracts_template_files() {
     let dir = tempfile::tempdir().unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("jetbrains")
         .arg("--dir")
@@ -46,7 +45,6 @@ fn install_jetbrains_refuses_existing_dir_without_force() {
     fs::create_dir_all(dir.path().join("lsp4ij-template")).unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("jetbrains")
         .arg("--dir")
@@ -63,7 +61,6 @@ fn install_claude_code_writes_manifest() {
     fs::create_dir_all(&bin_dir).unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("claude-code")
         .arg("--dir")
@@ -113,7 +110,6 @@ exit 0
 
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("claude-code")
         .arg("--dir")
@@ -151,7 +147,6 @@ fn committed_claude_code_plugin_matches_generated_manifest() {
 
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("claude-code")
         .arg("--dir")
@@ -237,7 +232,6 @@ exit 1
     let out = dir.path().join("out.vsix");
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("vscode")
         .env("LINTROPY_VSCODE_EXTENSION_DIR", &extension_dir)
@@ -260,7 +254,6 @@ exit 1
 fn install_vscode_rejects_missing_source_dir() {
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("vscode")
         .env("LINTROPY_VSCODE_EXTENSION_DIR", "/does/not/exist")
@@ -317,7 +310,6 @@ exit 0
 
     Command::cargo_bin("lintropy")
         .unwrap()
-        .arg("lsp")
         .arg("install")
         .arg("vscode")
         .arg("--profile")

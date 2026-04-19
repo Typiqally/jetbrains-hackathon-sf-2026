@@ -57,7 +57,7 @@ Query highlighting ships inside the main LSP extension. If it is missing, the
 LSP integration itself is not running. Install or reinstall it:
 
 ```console
-lintropy lsp install vscode       # or: cursor, jetbrains
+lintropy install vscode       # or: cursor, jetbrains
 ```
 
 JetBrains note: semantic tokens for the `query: |` DSL are not painted inside
