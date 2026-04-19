@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "highlight.js/styles/github-dark.css";
 
 @theme {
   --color-bg: #080808;
@@ -54,11 +53,68 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* highlight.js background override (use surface bg to match frame) */
-.hljs {
-  background: transparent !important;
+.code-block {
+  display: block;
   color: #ece8df;
-  padding: 0 !important;
+  font-family: var(--font-mono);
+}
+
+.code-line {
+  display: block;
+  min-height: 1.65em;
+}
+
+.tok-prompt,
+.tok-predicate {
+  color: #8de1b4;
+}
+
+.tok-command,
+.tok-key,
+.tok-field {
+  color: #7cc8ff;
+}
+
+.tok-warning {
+  color: #f5c66f;
+  font-weight: 600;
+}
+
+.tok-error {
+  color: #ff8e8e;
+  font-weight: 600;
+}
+
+.tok-help,
+.tok-label,
+.tok-keyword {
+  color: #d8a6ff;
+}
+
+.tok-string,
+.tok-inline-code {
+  color: #f7b37a;
+}
+
+.tok-capture,
+.tok-interpolation {
+  color: #ff9ac1;
+}
+
+.tok-node,
+.tok-number {
+  color: #f3f1eb;
+}
+
+.tok-flag,
+.tok-operator,
+.tok-punctuation,
+.tok-gutter {
+  color: #a5a099;
+}
+
+.tok-path {
+  color: #c9e7ff;
 }
 
 /* Prose — styles for rendered markdown */
@@ -174,6 +230,7 @@ body {
   background: transparent;
   padding: 0;
   font-size: inherit;
+  color: inherit;
 }
 
 .prose hr {

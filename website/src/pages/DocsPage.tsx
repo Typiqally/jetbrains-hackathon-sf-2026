@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
+import { MarkdownCode, MarkdownPre } from "../components/CodeBlock";
 import { getDoc } from "../docs";
 import { findLeaf, neighbors } from "../nav";
 import Sidebar from "../components/Sidebar";
@@ -58,10 +58,7 @@ export default function DocsPage() {
           <div className="prose" ref={contentRef}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[
-                rehypeSlug,
-                [rehypeHighlight, { detect: true, ignoreMissing: true }],
-              ]}
+              rehypePlugins={[rehypeSlug]}
               components={{
                 a: ({ href, children, ...props }) => {
                   const url = href ?? "";
@@ -85,6 +82,8 @@ export default function DocsPage() {
                     </Link>
                   );
                 },
+                pre: MarkdownPre,
+                code: MarkdownCode,
               }}
             >
               {injectTitle(title, doc.body)}

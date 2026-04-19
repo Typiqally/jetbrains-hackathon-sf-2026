@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CodeBlock } from "../components/CodeBlock";
 
 const terminalSample = `$ lintropy check .
 
@@ -93,18 +94,22 @@ export default function Home() {
       >
         <Card>
           <Windowbar />
-          <pre className="m-0 overflow-auto px-5 py-4 font-mono text-[13.5px] leading-[1.65] text-[color:var(--color-fg)]">
-            <code>{terminalSample}</code>
-          </pre>
+          <CodeBlock
+            code={terminalSample}
+            language="console"
+            className="m-0 overflow-auto px-5 py-4 font-mono text-[13.5px] leading-[1.65] text-[color:var(--color-fg)]"
+          />
         </Card>
 
         <Card>
           <p className="px-5 pt-4 text-[11px] font-bold uppercase tracking-[0.15em] text-[color:var(--color-fg-subtle)]">
             Example rule
           </p>
-          <pre className="m-0 overflow-auto px-5 py-4 font-mono text-[13px] leading-[1.6] text-[color:var(--color-fg)]">
-            <code>{ruleSample}</code>
-          </pre>
+          <CodeBlock
+            code={ruleSample}
+            language="lintropy"
+            className="m-0 overflow-auto px-5 py-4 font-mono text-[13px] leading-[1.6] text-[color:var(--color-fg)]"
+          />
         </Card>
       </section>
 
@@ -125,9 +130,11 @@ export default function Home() {
         <Row
           heading="Start."
           body={
-            <pre className="m-0 overflow-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 font-mono text-[13px] leading-[1.6] text-[color:var(--color-fg)]">
-              <code>{quickstart}</code>
-            </pre>
+            <CodeBlock
+              code={quickstart}
+              language="console"
+              className="m-0 overflow-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 font-mono text-[13px] leading-[1.6] text-[color:var(--color-fg)]"
+            />
           }
         />
       </section>
