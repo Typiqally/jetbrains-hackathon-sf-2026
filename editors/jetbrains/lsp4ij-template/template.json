@@ -14,7 +14,7 @@
     },
     {
       "fileType": {
-        "name": "YAML",
+        "name": "Lintropy YAML",
         "patterns": ["lintropy.yaml", "*.rule.yaml", "*.rules.yaml"]
       },
       "languageId": "yaml"
