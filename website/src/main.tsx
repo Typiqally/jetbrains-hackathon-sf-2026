@@ -7,20 +7,17 @@ import Home from "./pages/Home";
 import DocsPage from "./pages/DocsPage";
 import NotFound from "./pages/NotFound";
 
-const router = createBrowserRouter(
-  [
-    {
-      path: "/",
-      element: <App />,
-      children: [
-        { index: true, element: <Home /> },
-        { path: "*", element: <DocsPage /> },
-      ],
-    },
-    { path: "*", element: <NotFound /> },
-  ],
-  { basename: "/lintropy" },
-);
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: "*", element: <DocsPage /> },
+    ],
+  },
+  { path: "*", element: <NotFound /> },
+]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
