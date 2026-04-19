@@ -6,10 +6,10 @@ repo_name: Typiqally/lintropy
 
 theme:
   name: material
+  custom_dir: overrides
   logo: null
   favicon: null
   features:
-    - navigation.tabs
     - navigation.sections
     - navigation.top
     - content.code.copy

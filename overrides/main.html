@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block tabs %}
+{% if not page.is_homepage %}
+  {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if page.is_homepage %}
+  <section class="landing-page">
+    <div class="landing-hero">
+      <p class="landing-kicker">Repo-local linting</p>
+      <h1>Lintropy</h1>
+      <p class="landing-lede">The linter for rules your repo actually cares about.</p>
+      <p class="landing-body">
+        Put architecture boundaries, banned APIs, migration policy, and agent
+        guardrails in version control. One root config. Small YAML rule files.
+        Structural matching for Rust.
+      </p>
+
+      <div class="landing-actions">
+        <a class="md-button md-button--primary" href="{{ 'getting-started/' | url }}">Get started</a>
+        <a class="md-button" href="https://github.com/Typiqally/lintropy">View source</a>
+      </div>
+
+      <ul class="landing-list">
+        <li><strong>Repo-local:</strong> rules live with the code they govern.</li>
+        <li><strong>Structural:</strong> Rust rules use tree-sitter queries, not brittle grep.</li>
+        <li><strong>Practical:</strong> messages, severity, and autofix stay in one place.</li>
+        <li><strong>Agent-friendly:</strong> explicit enough for humans, simple enough for coding agents.</li>
+      </ul>
+    </div>
+
+    <section class="landing-showcase" aria-label="Lintropy examples">
+      <div class="landing-card landing-card-terminal">
+        <div class="landing-windowbar"><span></span><span></span><span></span></div>
+        <pre><code>$ lintropy check .
+
+warning[no-unwrap]: avoid .unwrap() on `client`
+  --&gt; src/handlers/users.rs:42:18
+  help: replace with `client.expect("TODO: handle error")`
+
+error[api-only-in-src-api]: API handlers must live under src/api/
+  --&gt; src/features/users/create_user.rs:1:1
+
+Summary: 1 error, 1 warning, 2 files affected.</code></pre>
+      </div>
+
+      <div class="landing-card">
+        <p class="landing-small-label">Example rule</p>
+        <pre><code>severity: warning
+message: "avoid .unwrap() on `{{recv}}`"
+fix: '{{recv}}.expect("TODO: handle error")'
+language: rust
+query: |
+  (call_expression
+    function: (field_expression
+      value: (_) @recv
+      field: (field_identifier) @method)
+    (#eq? @method "unwrap")) @match</code></pre>
+      </div>
+    </section>
+
+    <section class="landing-sections">
+      <div class="landing-row">
+        <h2>Rules live in the repo.</h2>
+        <p>
+          Review them like code. Change them with the codebase. Stop hiding
+          project policy in wiki pages, onboarding calls, and reviewer lore.
+        </p>
+      </div>
+
+      <div class="landing-row">
+        <h2>Simple shape.</h2>
+        <p>
+          A root <code>lintropy.yaml</code>. A <code>.lintropy/</code> folder.
+          One rule per file, or grouped rules where that helps.
+        </p>
+      </div>
+
+      <div class="landing-row">
+        <h2>Start.</h2>
+        <div>
+          <pre><code>brew tap Typiqally/lintropy
+brew install lintropy
+
+lintropy init
+lintropy check .</code></pre>
+        </div>
+      </div>
+    </section>
+  </section>
+{% else %}
+  {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block header %}
+  <header class="md-header" data-md-component="header">
+    <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
+      <a
+        href="{{ config.site_url | default(nav.homepage.url, true) | url }}"
+        title="{{ config.site_name }}"
+        class="md-header__button md-logo"
+        aria-label="{{ config.site_name }}"
+      ></a>
+
+      <label class="md-header__button md-icon" for="__drawer">
+        {% include ".icons/material/menu" ~ ".svg" %}
+      </label>
+
+      <div class="md-header__title" data-md-component="header-title">
+        <div class="md-header__ellipsis">
+          <span class="md-header__topic">
+            <span class="md-ellipsis">{{ config.site_name }}</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="lintropy-header-links">
+        <a class="lintropy-header-link" href="{{ nav.homepage.url | url }}">Home</a>
+        <a class="lintropy-header-link" href="{{ 'overview/' | url }}">Docs</a>
+      </div>
+
+      {% if "material/search" in config.plugins %}
+        <label class="md-header__button md-icon" for="__search">
+          {% include ".icons/material/magnify" ~ ".svg" %}
+        </label>
+        {% include "partials/search.html" %}
+      {% endif %}
+
+      {% if config.repo_url %}
+        <div class="md-header__source">
+          {% include "partials/source.html" %}
+        </div>
+      {% endif %}
+    </nav>
+  </header>
+{% endblock %}
