@@ -16,10 +16,9 @@ lintropy install <target>
 
 - [VS Code and Cursor](vscode.md) — extension `.vsix` built from source, installed via the editor CLI.
 - [JetBrains IDEs](jetbrains.md) — LSP4IJ template, one-click import.
-- [Claude Code](claude-code.md) — plugin + marketplace, auto-installs via `claude plugin install`.
+- [Claude Code](claude-code.md) — plugin + skill, loaded via `claude --plugin-dir`.
 - [Other LSP editors](other-editors.md) — Neovim, Helix, Zed — anything that spawns a stdio LSP server.
 - [Other agents](other-agents.md) — Continue, Aider, Codex CLI.
-- [Post-write hook](post-write-hook.md) — `lintropy hook` for agent harnesses that cannot drive an LSP.
 
 ## Recommended setup
 
@@ -27,8 +26,7 @@ For most teams:
 
 1. Run `lintropy init --with-skill`.
 2. Run `lintropy install <target>` for your editor and, if you use Claude Code, for `claude-code` (that one also drops the skill).
-3. Keep `lintropy check .` in CI.
-4. Use the hook only for fast feedback after edits, not as the only enforcement point.
+3. Keep `lintropy check .` in CI as the enforcement point.
 
 ## JSON Schema support
 

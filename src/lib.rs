@@ -12,8 +12,6 @@ pub mod output;
 // CLI-internal modules, public only so the `lintropy` binary (src/main.rs)
 // can reach them through the library crate. Not part of the stable API.
 #[doc(hidden)]
-pub mod agent_settings;
-#[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]
 pub mod commands;

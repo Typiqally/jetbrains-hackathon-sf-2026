@@ -103,15 +103,3 @@ Trailing code like this will not work:
 ```rust
 do_work(); // lintropy-ignore: some-rule
 ```
-
-## `lintropy hook` appears to do nothing
-
-That usually means one of these:
-
-- stdin did not contain a recognized JSON payload
-- the payload had no usable file path
-- the file path did not resolve
-- the file was gitignored
-- config failed to load
-
-The hook command is intentionally conservative and often exits `0` rather than failing noisy in automation glue.

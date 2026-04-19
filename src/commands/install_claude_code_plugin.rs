@@ -15,14 +15,15 @@
 //!   `PATH`. Users can still hand-edit the emitted `plugin.json` if they
 //!   want to pin a different binary.
 //!
-//! After writing the plugin directory we optionally shell out to
-//! `claude plugin install <dir> --scope <scope>` so the user does not
-//! have to run a second command. Pass `--no-install` to skip the shell-out
-//! (useful in CI and for users who prefer to use the marketplace flow).
+//! We deliberately do not shell out to `claude plugin install`. Current
+//! `claude` CLIs only accept `<name>@<marketplace>` for `install`, so
+//! the old `claude plugin install <dir>` shell-out always fails. Claude
+//! Code ships `claude --plugin-dir <path>` for exactly this case: load
+//! a local plugin directory without registering a marketplace. We print
+//! that invocation and let the user run it.
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command as ProcessCommand;
 
 use serde_json::{json, Value};
 
@@ -40,7 +41,6 @@ pub(crate) struct ClaudeCodeInstall {
     pub dir: Option<PathBuf>,
     pub force: bool,
     pub scope: PluginScope,
-    pub no_install: bool,
 }
 
 pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
@@ -55,28 +55,12 @@ pub(crate) fn run(args: ClaudeCodeInstall) -> Result<u8, CliError> {
 
     install_skill_for_scope(args.scope)?;
 
-    if args.no_install {
-        println!();
-        println!("Next step — install the plugin:");
-        println!(
-            "  claude plugin install {} --scope {}",
-            target.display(),
-            args.scope.as_str()
-        );
-        return Ok(EXIT_OK);
-    }
+    println!();
+    println!("Next step — load the plugin into Claude Code:");
+    println!("  claude --plugin-dir {}", target.display());
+    println!();
+    println!("Inside an already-running session, run `/reload-plugins` after edits.");
 
-    if let Some(claude) = locate_claude_cli() {
-        run_claude_install(&claude, &target, args.scope)?;
-    } else {
-        println!();
-        println!("`claude` CLI not found on PATH. Run the install manually:");
-        println!(
-            "  claude plugin install {} --scope {}",
-            target.display(),
-            args.scope.as_str()
-        );
-    }
     Ok(EXIT_OK)
 }
 
@@ -224,38 +208,4 @@ fn which_on_path(binary: &str) -> Option<PathBuf> {
         }
     }
     None
-}
-
-fn locate_claude_cli() -> Option<PathBuf> {
-    which_on_path("claude")
-}
-
-fn run_claude_install(
-    claude: &Path,
-    plugin_dir: &Path,
-    scope: PluginScope,
-) -> Result<(), CliError> {
-    println!();
-    println!(
-        "running: {} plugin install {} --scope {}",
-        claude.display(),
-        plugin_dir.display(),
-        scope.as_str()
-    );
-    let status = ProcessCommand::new(claude)
-        .arg("plugin")
-        .arg("install")
-        .arg(plugin_dir)
-        .arg("--scope")
-        .arg(scope.as_str())
-        .status()
-        .map_err(|err| {
-            CliError::internal(format!("failed to launch `{}`: {err}", claude.display()))
-        })?;
-    if !status.success() {
-        return Err(CliError::user(format!(
-            "`claude plugin install` exited with status {status}"
-        )));
-    }
-    Ok(())
 }

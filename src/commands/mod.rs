@@ -3,7 +3,6 @@
 
 pub mod check;
 pub mod explain;
-pub mod hook;
 pub mod init;
 pub mod install;
 pub(crate) mod install_claude_code_plugin;

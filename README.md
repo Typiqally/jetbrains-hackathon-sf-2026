@@ -163,7 +163,7 @@ without much prompting overhead.
 - deterministic repo discovery
 - explainable diagnostics
 - schema-friendly config
-- hook-based workflows for post-edit feedback
+- LSP-driven live feedback for post-edit loops
 
 If agents write code, they should write and respect the repo's guardrails too.
 
@@ -196,7 +196,7 @@ To scaffold lintropy inside your own repo:
 
 ```console
 lintropy init                   # writes lintropy.yaml + .lintropy/no-unwrap.rule.yaml
-lintropy init --with-skill      # also installs SKILL.md + wires the Claude Code hook
+lintropy init --with-skill      # also installs SKILL.md into detected agent skill dirs
 ```
 
 The canonical `SKILL.md` at
@@ -264,11 +264,10 @@ The marketplace manifest lives at the repo root so this works from any clean Cla
 
 ```console
 lintropy install claude-code                    # --scope project by default
-lintropy install claude-code --scope user       # personal-only
-lintropy install claude-code --no-install       # print the claude plugin install command instead
+lintropy install claude-code --scope user       # personal-only (skill target only)
 ```
 
-The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it to the cwd alongside the lintropy skill at `.claude/skills/lintropy/SKILL.md`, and shells out to `claude plugin install` when the `claude` CLI is on `PATH`.
+The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it into `./lintropy-claude-code-plugin/` alongside the lintropy skill at `.claude/skills/lintropy/SKILL.md`, and prints the `claude --plugin-dir <path>` invocation you should run. Use `/reload-plugins` to pick up edits without restarting.
 
 ### JSON Schemas
 

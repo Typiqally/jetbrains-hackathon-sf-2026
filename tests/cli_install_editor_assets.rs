@@ -65,12 +65,11 @@ fn install_claude_code_writes_manifest() {
         .arg("claude-code")
         .arg("--dir")
         .arg(dir.path())
-        .arg("--no-install")
         .env("PATH", &bin_dir)
         .assert()
         .code(0)
         .stdout(predicate::str::contains("extracted"))
-        .stdout(predicate::str::contains("claude plugin install"));
+        .stdout(predicate::str::contains("claude --plugin-dir"));
 
     let manifest = dir
         .path()
@@ -95,18 +94,10 @@ fn install_claude_code_writes_manifest() {
 }
 
 #[test]
-fn install_claude_code_shells_out_when_claude_on_path() {
+fn install_claude_code_prints_plugin_dir_invocation() {
     let dir = tempfile::tempdir().unwrap();
     let bin_dir = dir.path().join("bin");
     fs::create_dir_all(&bin_dir).unwrap();
-    let log = dir.path().join("claude.log");
-    write_executable(
-        &bin_dir.join("claude"),
-        r#"#!/bin/sh
-echo "$@" >> "$LINTROPY_CLAUDE_LOG"
-exit 0
-"#,
-    );
 
     Command::cargo_bin("lintropy")
         .unwrap()
@@ -117,15 +108,10 @@ exit 0
         .arg("--scope")
         .arg("user")
         .env("PATH", &bin_dir)
-        .env("LINTROPY_CLAUDE_LOG", &log)
         .assert()
         .code(0)
-        .stdout(predicate::str::contains("running:"));
-
-    let invocation = fs::read_to_string(&log).unwrap();
-    assert!(invocation.contains("plugin install"));
-    assert!(invocation.contains("--scope user"));
-    assert!(invocation.contains("lintropy-claude-code-plugin"));
+        .stdout(predicate::str::contains("claude --plugin-dir"))
+        .stdout(predicate::str::contains("lintropy-claude-code-plugin"));
 }
 
 #[test]
@@ -151,7 +137,6 @@ fn committed_claude_code_plugin_matches_generated_manifest() {
         .arg("claude-code")
         .arg("--dir")
         .arg(dir.path())
-        .arg("--no-install")
         .env("PATH", &bin_dir)
         .assert()
         .code(0);
@@ -170,7 +155,7 @@ fn committed_claude_code_plugin_matches_generated_manifest() {
     assert_eq!(
         generated, committed,
         "editors/claude-code/.claude-plugin/plugin.json is out of sync with build_manifest(). \
-         Regenerate: `lintropy install claude-code --no-install` then copy the file over."
+         Regenerate: `lintropy install claude-code` then copy the file over."
     );
 }
 

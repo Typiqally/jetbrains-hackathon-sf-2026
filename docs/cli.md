@@ -127,27 +127,6 @@ Useful for:
 - tooling
 - AI grounding
 
-## `lintropy hook`
-
-Runs a single-file check from an agent/editor post-write hook payload on stdin.
-
-```console
-some-tool | lintropy hook
-some-tool | lintropy hook --agent claude-code
-some-tool | lintropy hook --format json
-some-tool | lintropy hook --fail-on warning
-```
-
-Current behavior:
-
-- extracts a file path from known JSON payload shapes
-- loads config from the current repo
-- skips gitignored files
-- runs a single-file lint
-- exits `2` only when matching diagnostics meet the hook `--fail-on` threshold
-
-If the hook payload is missing or malformed, the command quietly exits `0`.
-
 ## `lintropy lsp`
 
 Starts the Language Server Protocol backend over stdio.
@@ -167,9 +146,8 @@ lintropy install vscode                          # VS Code
 lintropy install cursor --profile Default        # Cursor, named profile
 lintropy install vscode --package-only -o out.vsix  # just build the .vsix
 lintropy install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
-lintropy install claude-code                     # Claude Code plugin + skill, auto-installs
-lintropy install claude-code --no-install        # write the plugin, print the install command
-lintropy install claude-code --scope user        # user-scoped install
+lintropy install claude-code                     # Claude Code plugin + skill
+lintropy install claude-code --scope user        # user-scoped skill install
 ```
 
 For VS Code / Cursor this builds the checked-out extension source with
@@ -178,8 +156,8 @@ or writes it to disk. For JetBrains it unpacks the LSP4IJ custom template
 for a one-time IDE import. For Claude Code it generates the plugin
 manifest fresh (version + feature-gated extension map + absolute binary
 path), materialises the lintropy skill at
-`.claude/skills/lintropy/SKILL.md` for the matching scope, and shells out
-to `claude plugin install`.
+`.claude/skills/lintropy/SKILL.md` for the matching scope, and prints the
+`claude --plugin-dir <path>` invocation needed to load the plugin.
 
 See [`Integrations`](integrations/index.md) for per-target walkthroughs
 including the Claude Code marketplace flow.

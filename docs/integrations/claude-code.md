@@ -32,13 +32,14 @@ This reads the same `editors/claude-code/.claude-plugin/plugin.json` straight fr
 lintropy install claude-code
 ```
 
-Generates the plugin manifest fresh (version synced to the installed `lintropy`, extension map scoped to the compiled-in languages, `command` resolved to the absolute binary path), materialises the lintropy skill at `.claude/skills/lintropy/SKILL.md` for the matching scope, and then shells out to `claude plugin install <dir> --scope <scope>` when the `claude` CLI is on `PATH`.
+Generates the plugin manifest fresh (version synced to the installed `lintropy`, extension map scoped to the compiled-in languages, `command` resolved to the absolute binary path), materialises the lintropy skill at `.claude/skills/lintropy/SKILL.md` for the matching scope, and prints the `claude --plugin-dir <path>` invocation you should run to load the plugin. Use `/reload-plugins` inside a running session to pick up manifest edits without restarting.
+
+Why not shell out to `claude plugin install` automatically? Current `claude` CLIs only accept `<name>@<marketplace>` for `install`, and registering a throwaway marketplace per dev iteration is worse ergonomics than `--plugin-dir`. For a persistent install, use the marketplace flow above.
 
 ### Flags
 
-- `--scope project` (default) — team-shared, recorded in `.claude/settings.json`; skill written to `./.claude/skills/lintropy/`.
-- `--scope user` — personal-only install; skill written to `$HOME/.claude/skills/lintropy/`.
-- `--no-install` — write the plugin directory + skill but do not shell out; prints the `claude plugin install` command for you to run.
+- `--scope project` (default) — skill written to `./.claude/skills/lintropy/`.
+- `--scope user` — skill written to `$HOME/.claude/skills/lintropy/`.
 - `--dir <PATH>` — write the plugin directory somewhere other than the cwd.
 - `--force` — overwrite an existing plugin directory.
 

@@ -24,15 +24,15 @@ For a local checkout:
 ### CLI
 
 ```console
-lintropy lsp install claude-code                 # --scope project by default
-lintropy lsp install claude-code --scope user    # personal-only
-lintropy lsp install claude-code --no-install    # write the dir, print the install command
+lintropy install claude-code                 # --scope project by default
+lintropy install claude-code --scope user    # personal-only (skill target)
 ```
 
 The CLI generates this plugin directory freshly (version synced to the
 installed `lintropy`, extension map scoped to compiled-in languages,
-`command` resolved to the absolute binary path) and shells out to
-`claude plugin install` when the `claude` CLI is on `PATH`.
+`command` resolved to the absolute binary path) and prints the
+`claude --plugin-dir <path>` invocation to load it. Use
+`/reload-plugins` inside a running session after manifest edits.
 
 ## What's inside
 

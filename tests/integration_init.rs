@@ -1,4 +1,4 @@
-//! WP9 — end-to-end `lintropy init --with-skill`.
+//! End-to-end `lintropy init --with-skill`.
 
 use std::fs;
 
@@ -10,17 +10,10 @@ fn lintropy() -> Command {
 }
 
 #[test]
-fn init_with_skill_installs_skill_and_merges_settings_when_claude_present() {
+fn init_with_skill_installs_skill_when_claude_present() {
     let dir = tempfile::tempdir().unwrap();
     fs::create_dir_all(dir.path().join(".claude")).unwrap();
-    let preexisting = serde_json::json!({
-        "hooks": {
-            "PreToolUse": [
-                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "my-pre-hook" }] }
-            ]
-        },
-        "other_user_setting": "keep-me"
-    });
+    let preexisting = serde_json::json!({ "other_user_setting": "keep-me" });
     fs::write(
         dir.path().join(".claude/settings.json"),
         serde_json::to_string_pretty(&preexisting).unwrap(),
@@ -56,17 +49,9 @@ fn init_with_skill_installs_skill_and_merges_settings_when_claude_present() {
         &fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
     )
     .unwrap();
-    // Unrelated user settings preserved.
+    // Unrelated user settings preserved; no hooks injected.
     assert_eq!(settings["other_user_setting"], "keep-me");
-    assert_eq!(settings["hooks"]["PreToolUse"][0]["matcher"], "Bash");
-    // Lintropy PostToolUse entry merged in.
-    let post = settings["hooks"]["PostToolUse"].as_array().unwrap();
-    assert!(
-        post.iter()
-            .any(|entry| entry["matcher"] == "Write|Edit|NotebookEdit"
-                && entry["hooks"][0]["command"] == "lintropy hook --agent claude-code"),
-        "expected PostToolUse entry with matcher + lintropy hook command, got {post:?}"
-    );
+    assert!(settings.get("hooks").is_none());
 }
 
 #[test]

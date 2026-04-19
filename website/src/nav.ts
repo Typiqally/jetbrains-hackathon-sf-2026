@@ -31,7 +31,6 @@ export const nav: NavGroup[] = [
       { title: "Claude Code", slug: "integrations/claude-code" },
       { title: "Other LSP editors", slug: "integrations/other-editors" },
       { title: "Other agents", slug: "integrations/other-agents" },
-      { title: "Post-write hook", slug: "integrations/post-write-hook" },
     ],
   },
   {

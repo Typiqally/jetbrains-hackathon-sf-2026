@@ -41,14 +41,13 @@ fn init_with_skill_no_agent_dirs_prints_snippet() {
         .args(["init", "--with-skill"])
         .assert()
         .code(0)
-        .stdout(predicate::str::contains("no `.claude/` or `.cursor/`"))
-        .stdout(predicate::str::contains("PostToolUse"));
+        .stdout(predicate::str::contains("no `.claude/` or `.cursor/`"));
     assert!(!dir.path().join(".claude").exists());
     assert!(!dir.path().join(".cursor").exists());
 }
 
 #[test]
-fn init_with_skill_claude_present_installs_skill_and_merges_settings() {
+fn init_with_skill_claude_present_installs_skill() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
 
@@ -58,24 +57,13 @@ fn init_with_skill_claude_present_installs_skill_and_merges_settings() {
         .args(["init", "--with-skill"])
         .assert()
         .code(0)
-        .stdout(predicate::str::contains(".claude/skills/lintropy/SKILL.md"))
-        .stdout(predicate::str::contains(".claude/settings.json"));
+        .stdout(predicate::str::contains(".claude/skills/lintropy/SKILL.md"));
 
     let skill = dir.path().join(".claude/skills/lintropy/SKILL.md");
     assert!(skill.is_file());
     let first = std::fs::read_to_string(&skill).unwrap();
     assert!(first.starts_with("# version:"), "missing version header");
-
-    let settings_path = dir.path().join(".claude/settings.json");
-    let parsed: Value =
-        serde_json::from_str(&std::fs::read_to_string(&settings_path).unwrap()).unwrap();
-    let entry = &parsed["hooks"]["PostToolUse"][0];
-    assert_eq!(entry["matcher"], "Write|Edit|NotebookEdit");
-    assert_eq!(entry["hooks"][0]["type"], "command");
-    assert_eq!(
-        entry["hooks"][0]["command"],
-        "lintropy hook --agent claude-code"
-    );
+    assert!(!dir.path().join(".claude/settings.json").exists());
 }
 
 #[test]
@@ -94,8 +82,6 @@ fn init_with_skill_rerun_is_idempotent() {
     std::fs::remove_file(dir.path().join("lintropy.yaml")).unwrap();
     std::fs::remove_file(dir.path().join(".lintropy/no-unwrap.rule.yaml")).unwrap();
 
-    let settings_before =
-        std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap();
     let skill_before =
         std::fs::read_to_string(dir.path().join(".claude/skills/lintropy/SKILL.md")).unwrap();
 
@@ -107,28 +93,16 @@ fn init_with_skill_rerun_is_idempotent() {
         .code(0)
         .stdout(predicate::str::contains("unchanged"));
 
-    let settings_after = std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap();
     let skill_after =
         std::fs::read_to_string(dir.path().join(".claude/skills/lintropy/SKILL.md")).unwrap();
-    assert_eq!(settings_before, settings_after);
     assert_eq!(skill_before, skill_after);
 }
 
 #[test]
-fn init_with_skill_preserves_unrelated_claude_hooks() {
+fn init_with_skill_preserves_unrelated_claude_settings() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
-    let settings = serde_json::json!({
-        "hooks": {
-            "PreToolUse": [
-                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "my-pre-hook" }] }
-            ],
-            "PostToolUse": [
-                { "matcher": "Read", "hooks": [{ "type": "command", "command": "some-other-hook" }] }
-            ]
-        },
-        "other_user_setting": "keep-me"
-    });
+    let settings = serde_json::json!({ "other_user_setting": "keep-me" });
     std::fs::write(
         dir.path().join(".claude/settings.json"),
         serde_json::to_string_pretty(&settings).unwrap(),
@@ -147,20 +121,8 @@ fn init_with_skill_preserves_unrelated_claude_hooks() {
     )
     .unwrap();
     assert_eq!(parsed["other_user_setting"], "keep-me");
-    assert_eq!(parsed["hooks"]["PreToolUse"][0]["matcher"], "Bash");
-    let post = parsed["hooks"]["PostToolUse"].as_array().unwrap();
-    assert_eq!(post.len(), 2);
-    assert_eq!(post[0]["matcher"], "Read");
-    assert_eq!(post[1]["matcher"], "Write|Edit|NotebookEdit");
-    assert_eq!(
-        post[1]["hooks"][0]["command"],
-        "lintropy hook --agent claude-code"
-    );
+    assert!(parsed.get("hooks").is_none());
 }
-
-// Note: WP7's `merge_claude_settings` replaces the full PostToolUse entry
-// matching the canonical matcher; it does not splice inner-hook siblings.
-// A finer-grained merge (preserving sibling inner hooks) is TODO(post-mvp).
 
 #[test]
 fn init_with_skill_dir_override_writes_only_to_that_dir() {
@@ -182,7 +144,7 @@ fn init_with_skill_dir_override_writes_only_to_that_dir() {
 }
 
 #[test]
-fn init_with_skill_cursor_present_installs_skill_no_settings_merge() {
+fn init_with_skill_cursor_present_installs_skill() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".cursor")).unwrap();
 

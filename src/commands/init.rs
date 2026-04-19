@@ -1,14 +1,12 @@
 //! `lintropy init` — scaffold `lintropy.yaml` and `.lintropy/`.
 //!
 //! `--with-skill` writes the embedded `SKILL.md` into detected agent skill
-//! directories (§10.2) and, when `.claude/` is present, merges the §15.3
-//! `PostToolUse` entry into `.claude/settings.json` via
-//! `agent_settings::merge_claude_settings`. Idempotent.
+//! directories (`.claude/skills/lintropy/`, `.cursor/skills/lintropy/`) so
+//! coding agents have repo-aware lintropy guidance. Idempotent.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::agent_settings;
 use crate::cli::InitArgs;
 use crate::commands::current_dir;
 use crate::exit::{CliError, EXIT_OK};
@@ -17,8 +15,6 @@ use crate::skill::{report_skill, write_skill};
 const ROOT_CONFIG: &str = "lintropy.yaml";
 const EXAMPLE_RULE_DIR: &str = ".lintropy";
 const EXAMPLE_RULE_FILE: &str = "no-unwrap.rule.yaml";
-const CLAUDE_MATCHER: &str = "Write|Edit|NotebookEdit";
-const LINTROPY_COMMAND: &str = "lintropy hook --agent claude-code";
 const VSCODE_EXTENSIONS: &str = r#"{
   "recommendations": [
     "lintropy.lintropy",
@@ -87,7 +83,10 @@ fn install_skill(root: &Path, override_dir: Option<&Path>) -> Result<(), CliErro
     let cursor_present = cursor.is_dir();
 
     if !claude_present && !cursor_present {
-        print_snippets();
+        println!();
+        println!("no `.claude/` or `.cursor/` detected — skipping skill install.");
+        println!("re-run `lintropy init --with-skill` from a repo with one of those directories,");
+        println!("or pass `--skill-dir <path>` to write `SKILL.md` somewhere explicit.");
         return Ok(());
     }
 
@@ -95,16 +94,6 @@ fn install_skill(root: &Path, override_dir: Option<&Path>) -> Result<(), CliErro
         let target = claude.join("skills").join("lintropy").join("SKILL.md");
         let outcome = write_skill(&target)?;
         report_skill(&target, outcome);
-        let settings_path = claude.join("settings.json");
-        let before = fs::read(&settings_path).ok();
-        agent_settings::merge_claude_settings(root)?;
-        let after = fs::read(&settings_path).ok();
-        let label = match (before, after) {
-            (None, Some(_)) => "created",
-            (Some(b), Some(a)) if b == a => "unchanged",
-            _ => "updated",
-        };
-        println!("{label} {}", settings_path.display());
     }
     if cursor_present {
         let target = cursor.join("skills").join("lintropy").join("SKILL.md");
@@ -112,32 +101,6 @@ fn install_skill(root: &Path, override_dir: Option<&Path>) -> Result<(), CliErro
         report_skill(&target, outcome);
     }
     Ok(())
-}
-
-fn print_snippets() {
-    println!();
-    println!("no `.claude/` or `.cursor/` detected — skipping skill install.");
-    println!("paste these into your agent config to wire lintropy manually:");
-    println!();
-    println!("Claude Code (.claude/settings.json):");
-    println!(
-        r#"{{
-  "hooks": {{
-    "PostToolUse": [
-      {{
-        "matcher": "{matcher}",
-        "hooks": [
-          {{ "type": "command", "command": "{cmd}" }}
-        ]
-      }}
-    ]
-  }}
-}}"#,
-        matcher = CLAUDE_MATCHER,
-        cmd = LINTROPY_COMMAND,
-    );
-    println!();
-    println!("Codex: phase-2 — schema TBD.");
 }
 
 /// Write `.vscode/extensions.json` recommending the lintropy + YAML

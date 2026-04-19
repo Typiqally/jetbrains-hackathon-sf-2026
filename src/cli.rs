@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use crate::core::Severity;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser)]
@@ -21,8 +20,6 @@ pub struct Cli {
 pub enum Command {
     /// Walk PATHS, run every matching rule, and print diagnostics (default).
     Check(CheckArgs),
-    /// Process a single post-write hook event for an agent harness.
-    Hook(HookArgs),
     /// Describe a loaded rule by id.
     Explain(ExplainArgs),
     /// List every rule loaded from the config.
@@ -56,45 +53,6 @@ pub enum OutputFormat {
     Text,
     /// Canonical JSON envelope (§7.3 of the spec).
     Json,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum HookAgent {
-    /// Detect the harness from environment variables, Claude-first for phase 1.
-    #[default]
-    Auto,
-    /// Claude Code hook payloads and settings merge.
-    #[value(name = "claude-code")]
-    ClaudeCode,
-    /// Codex hook payloads (phase-2 stub for now).
-    Codex,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum HookFormat {
-    /// One compact line per diagnostic, plus an optional help line.
-    #[default]
-    Compact,
-    /// Canonical JSON envelope (§7.3).
-    Json,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum HookSeverity {
-    Info,
-    Warning,
-    #[default]
-    Error,
-}
-
-impl From<HookSeverity> for Severity {
-    fn from(value: HookSeverity) -> Self {
-        match value {
-            HookSeverity::Info => Severity::Info,
-            HookSeverity::Warning => Severity::Warning,
-            HookSeverity::Error => Severity::Error,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
@@ -151,29 +109,6 @@ pub struct CheckArgs {
     /// Suppress reporter output (exit code still reflects fail_on).
     #[arg(long)]
     pub quiet: bool,
-}
-
-#[derive(Debug, Args)]
-pub struct HookArgs {
-    /// Override config discovery with an explicit path.
-    #[arg(long, value_name = "PATH")]
-    pub config: Option<PathBuf>,
-
-    /// Agent harness to target.
-    #[arg(long, value_enum, default_value_t = HookAgent::Auto)]
-    pub agent: HookAgent,
-
-    /// Output format for diagnostics written to stderr.
-    #[arg(long, value_enum, default_value_t = HookFormat::Compact)]
-    pub format: HookFormat,
-
-    /// Minimum severity that causes an exit status of 2.
-    #[arg(long = "fail-on", value_enum, default_value_t = HookSeverity::Error)]
-    pub fail_on: HookSeverity,
-
-    /// Emit non-blocking hook warnings to stderr.
-    #[arg(long, hide = true)]
-    pub verbose: bool,
 }
 
 #[derive(Debug, Default, Args)]
@@ -276,7 +211,7 @@ pub enum InstallTarget {
     Cursor,
     /// JetBrains IDEs — unpacks the LSP4IJ custom template for one-time import.
     Jetbrains,
-    /// Claude Code — writes the plugin manifest and calls `claude plugin install`.
+    /// Claude Code — writes the plugin manifest and prints the `claude --plugin-dir` invocation.
     #[value(name = "claude-code")]
     ClaudeCode,
 }
@@ -300,14 +235,10 @@ pub struct InstallArgs {
     #[arg(long)]
     pub force: bool,
 
-    /// Claude Code plugin scope passed to `claude plugin install`.
+    /// Claude Code: scope for the lintropy skill install (`project` writes
+    /// `./.claude/skills/lintropy/SKILL.md`, `user` writes to `$HOME`).
     #[arg(long, value_enum, default_value_t = PluginScope::Project)]
     pub scope: PluginScope,
-
-    /// Claude Code: write the plugin directory but do not shell out to
-    /// `claude plugin install`. Prints the command instead.
-    #[arg(long = "no-install")]
-    pub no_install: bool,
 
     /// VS Code / Cursor: build the `.vsix` but do not install it.
     #[arg(long = "package-only")]
