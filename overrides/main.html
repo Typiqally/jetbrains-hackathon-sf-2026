@@ -118,10 +118,18 @@ lintropy check .</code></pre>
         </div>
       </div>
 
-      <div class="lintropy-header-links">
-        <a class="lintropy-header-link" href="{{ nav.homepage.url | url }}">Home</a>
-        <a class="lintropy-header-link" href="{{ 'overview/' | url }}">Docs</a>
-      </div>
+      {% if page.is_homepage %}
+        <div class="lintropy-header-links">
+          <a class="lintropy-header-link" href="{{ 'overview/' | url }}">Docs</a>
+        </div>
+      {% endif %}
+
+      {% if config.theme.palette %}
+        {% if not config.theme.palette is mapping %}
+          {% include "partials/palette.html" %}
+          {% include "partials/javascripts/palette.html" %}
+        {% endif %}
+      {% endif %}
 
       {% if "material/search" in config.plugins %}
         <label class="md-header__button md-icon" for="__search">
@@ -136,5 +144,12 @@ lintropy check .</code></pre>
         </div>
       {% endif %}
     </nav>
+    {% if not page.is_homepage %}
+      {% if "navigation.tabs.sticky" in features %}
+        {% if "navigation.tabs" in features %}
+          {% include "partials/tabs.html" %}
+        {% endif %}
+      {% endif %}
+    {% endif %}
   </header>
 {% endblock %}
