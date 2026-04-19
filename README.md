@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🌿 Lintropy
+<img src="logo.png" alt="Lintropy logo" width="220" />
+
+# Lintropy
 
 **Repo-native linting for architecture, boundaries, and team-specific rules.**
 
