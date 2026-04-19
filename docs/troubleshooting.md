@@ -62,7 +62,7 @@ lintropy lsp install vscode       # or: cursor, jetbrains
 
 JetBrains note: semantic tokens for the `query: |` DSL are not painted inside
 JetBrains IDEs (LSP4IJ discards them for composite PSI elements). Diagnostics
-and inline rule-file linting still work. See [`editors/jetbrains/README.md`](../editors/jetbrains/README.md).
+and inline rule-file linting still work. See [`editors/jetbrains/README.md`](https://github.com/Typiqally/lintropy/blob/main/editors/jetbrains/README.md).
 
 ## Live diagnostics are missing in my editor
 

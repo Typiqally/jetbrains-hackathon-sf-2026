@@ -3,22 +3,46 @@ site_description: Repo-local linting for rules your codebase actually cares abou
 site_url: https://typiqally.github.io/lintropy/
 repo_url: https://github.com/Typiqally/lintropy
 repo_name: Typiqally/lintropy
+edit_uri: edit/main/docs/
 
 theme:
   name: material
   custom_dir: overrides
   logo: null
   favicon: null
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
     - navigation.top
+    - navigation.tracking
+    - navigation.instant
+    - navigation.instant.progress
+    - toc.follow
     - content.code.copy
+    - content.action.edit
     - search.suggest
     - search.highlight
+    - search.share
   palette:
-    - scheme: slate
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: black
       accent: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
 
 markdown_extensions:
   - admonition
@@ -27,6 +51,7 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -35,15 +60,25 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
 
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Typiqally/lintropy
+      name: Lintropy on GitHub
+
 extra_css:
   - stylesheets/extra.css
 
 nav:
   - Home: index.md
-  - Overview: overview.md
-  - Getting Started: getting-started.md
-  - Configuration: configuration.md
-  - Rule Language: rule-language.md
-  - CLI Guide: cli.md
-  - Editor And Agent Setup: editor-and-agent-setup.md
-  - Troubleshooting: troubleshooting.md
+  - Start here:
+      - Overview: overview.md
+      - Getting started: getting-started.md
+  - Reference:
+      - Configuration: configuration.md
+      - Rule language: rule-language.md
+      - CLI guide: cli.md
+  - Integrations:
+      - Editors and agents: editor-and-agent-setup.md
+  - Support:
+      - Troubleshooting: troubleshooting.md
