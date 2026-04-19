@@ -75,7 +75,7 @@ export default function DocsPage() {
                       </a>
                     );
                   }
-                  const resolved = resolveInternalLink(slug, url);
+                  const resolved = resolveInternalLink(doc.dir, url);
                   return (
                     <Link to={resolved} {...props}>
                       {children}
@@ -133,10 +133,9 @@ function injectTitle(title: string, body: string): string {
   return /^#\s+/m.test(body) ? body : `# ${title}\n\n${body}`;
 }
 
-function resolveInternalLink(fromSlug: string, href: string): string {
+function resolveInternalLink(baseDir: string, href: string): string {
   const [pathPart, hash] = href.split("#");
   if (!pathPart) return `#${hash ?? ""}`;
-  const baseDir = fromSlug.includes("/") ? fromSlug.replace(/\/[^/]+$/, "") : "";
   const parts = (baseDir ? baseDir.split("/") : []).concat(pathPart.split("/"));
   const resolved: string[] = [];
   for (const p of parts) {

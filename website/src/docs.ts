@@ -6,6 +6,7 @@ const raw = import.meta.glob("../../docs/**/*.md", {
 
 export type DocEntry = {
   slug: string;
+  dir: string;
   title?: string;
   body: string;
 };
@@ -13,10 +14,13 @@ export type DocEntry = {
 const docs: Record<string, DocEntry> = {};
 
 for (const [path, content] of Object.entries(raw)) {
-  const slug = path
-    .replace(/^.*\/docs\//, "")
-    .replace(/\.md$/, "")
-    .replace(/\/index$/, "");
+  const rawSlug = path.replace(/^.*\/docs\//, "").replace(/\.md$/, "");
+  const slug = rawSlug.replace(/\/index$/, "");
+  const dir = rawSlug.endsWith("/index")
+    ? slug
+    : slug.includes("/")
+      ? slug.replace(/\/[^/]+$/, "")
+      : "";
 
   const { frontmatter, body } = splitFrontmatter(content);
   const title =
@@ -24,7 +28,7 @@ for (const [path, content] of Object.entries(raw)) {
     body.match(/^#\s+(.+)$/m)?.[1]?.trim() ??
     undefined;
 
-  docs[slug] = { slug, title, body };
+  docs[slug] = { slug, dir, title, body };
 }
 
 export function getDoc(slug: string): DocEntry | undefined {
